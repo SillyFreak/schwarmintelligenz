@@ -2,6 +2,14 @@
 package cbcserver;
 
 
+/**
+ * <p>
+ * Command strings for the CBC communication.
+ * </p>
+ * 
+ * @version V1.0 06.12.2012
+ * @author Clemens Koza
+ */
 public interface Commands {
     public static String STOP      = "ao00";
     public static String FORWARD   = "ao01";

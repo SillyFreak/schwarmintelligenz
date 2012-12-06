@@ -2,8 +2,6 @@
 package cbcserver;
 
 
-import static cbcserver.CBCGUI.*;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
@@ -14,6 +12,15 @@ import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
 
 
+/**
+ * <p>
+ * The SwarmServer accepts connections from the robots. A robot is identified by its IP, so no other connections
+ * will be accepted
+ * </p>
+ * 
+ * @version V1.0 06.12.2012
+ * @author Clemens Koza
+ */
 public class SwarmServer extends Interruptible {
     private static final Logger log = new Logger("Server");
     
@@ -25,13 +32,13 @@ public class SwarmServer extends Interruptible {
         
         for(Enumeration<NetworkInterface> ni = NetworkInterface.getNetworkInterfaces(); ni.hasMoreElements();) {
             NetworkInterface iface = ni.nextElement();
-            log.printf("network interface: %s%n", iface.getDisplayName());
+            log.printf("network interface: %s", iface.getDisplayName());
             for(Enumeration<InetAddress> ia = iface.getInetAddresses(); ia.hasMoreElements();) {
                 InetAddress address = ia.nextElement();
-                log.printf("  IP: %s%n", address.getHostAddress());
+                log.printf("  IP: %s", address.getHostAddress());
             }
         }
-        log.printf("socket on port %d%n", port);
+        log.printf("socket on port %d", port);
     }
     
     @Override
@@ -46,24 +53,24 @@ public class SwarmServer extends Interruptible {
                     log.println("waiting for connection...");
                     Socket sock = ssock.accept();
                     String addr = sock.getInetAddress().getHostAddress();
-                    log.printf("accepting %s%n", addr);
+                    log.printf("accepting %s", addr);
                     
                     Robot robot = Robot.getByAddress(addr);
                     if(robot == null) {
-                        log.printf("unknown address %s%n", addr);
+                        log.printf("unknown address %s", addr);
                     } else {
-                        log.printf("%s connected%n", robot);
+                        log.printf("%s connected", robot);
                         (robot.client = new RobotHandle(pool, sock, robot)).start();
                     }
                 } catch(InterruptedIOException ex) {
-                    log.printf("interrupted: %s%n", ex);
+                    log.printf("interrupted: %s", ex);
                 } catch(IOException ex) {
                     log.trace(ex);
                 }
             }
             log.println("exiting!");
         } catch(InterruptedIOException ex) {
-            log.printf("interrupted: %s%n", ex);
+            log.printf("interrupted: %s", ex);
         } catch(IOException ex) {
             log.trace(ex);
         } finally {
@@ -73,14 +80,5 @@ public class SwarmServer extends Interruptible {
                 log.trace(ex);
             }
         }
-    }
-    
-    public synchronized void send(Robot robot, String message) throws IOException {
-        robot.send(message);
-    }
-    
-    public synchronized void sendAll(String m) throws IOException {
-        for(Robot r:robots)
-            r.send(m);
     }
 }

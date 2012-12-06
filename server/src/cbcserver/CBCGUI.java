@@ -2,15 +2,13 @@
 package cbcserver;
 
 
-import static java.util.Arrays.*;
-import static java.util.Collections.*;
+import static cbcserver.Robot.*;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,23 +26,30 @@ import javax.swing.JRootPane;
 import javax.swing.JToggleButton;
 
 
+/**
+ * <p>
+ * Main class of the swarm server. Shows a panel with buttons for the four robots, and starts the server and status
+ * threads.
+ * </p>
+ * 
+ * @version V1.0 06.12.2012
+ * @author Clemens Koza
+ */
 public final class CBCGUI extends JRootPane implements Commands, ChangedListener, ActionListener {
-    private static final long       serialVersionUID = -2620534937798975690L;
+    private static final long     serialVersionUID = -2620534937798975690L;
     
-    public static final int         PORT             = 28109;
-    public static final List<Robot> robots           = unmodifiableList(asList(Robot.values()));
+    public static final int       PORT             = 28109;
     
-    private static final Logger     log              = new Logger("CBCGUI");
-    private static final boolean    debug            = true;
+    private static final Logger   log              = new Logger("CBCGUI");
+    private static final boolean  debug            = true;
     
-    private final JMenuItem         status;
-    private final JLabel            label;
+    private final JMenuItem       status;
+    private final JLabel          label;
     
-    private final ExecutorService   pool;
-    private final SwarmServer       cs;
-    private final BotStatus         bots;
+    private final ExecutorService pool;
+    private final BotStatus       bots;
     
-    private Robot                   selectedRobot;
+    private Robot                 selectedRobot;
     
     public CBCGUI() throws IOException {
         JComponent p = (JComponent) getContentPane();
@@ -89,18 +94,32 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
         
         { //start server and status update thread
             pool = Executors.newCachedThreadPool();
-            (cs = new SwarmServer(pool, PORT)).start();
+            (new SwarmServer(pool, PORT)).start();
             (bots = new BotStatus(pool)).start();
         }
     }
     
+    /**
+     * {@inheritDoc}
+     * 
+     * <p>
+     * Re-orders the robots when a robot becomes active or inactive
+     * </p>
+     */
     @Override
     public void change(Robot robot) {
-        log.printf("%s %s%n", robot.name(), robot.isActive()? "active":"inactive");
-        robot.button.setEnabled(robot.isActive());
+        log.printf("%s %s", robot.name(), robot.isActive()? "active":"inactive");
         orderRobots();
     }
     
+    /**
+     * {@inheritDoc}
+     * 
+     * <p>
+     * If a toggle button was pressed, selects a robot to be the leader, and re-orders them. For the debug-button,
+     * the status update is invoked.
+     * </p>
+     */
     @Override
     public void actionPerformed(ActionEvent ae) {
         if(ae.getSource() == status) {
@@ -110,36 +129,55 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
         
         if(!((AbstractButton) ae.getSource()).isSelected()) return;
         selectedRobot = Robot.valueOf(ae.getActionCommand());
-        if(selectedRobot.isActive()) {
-            orderRobots();
-        }
+        orderRobots();
     }
     
+    /**
+     * <p>
+     * Orders the robots. The first active robot following the selected one will be the leader, the other ones will
+     * follow their respective previous robots.
+     * </p>
+     */
     public void orderRobots() {
         try {
+            //if no leader is selected, do nothing
             if(selectedRobot == null) return;
-            cs.send(selectedRobot, RANDOM);
+            
+            log.println("reorder robots");
+            log.printf("  selected: %s", selectedRobot);
             
             int size = robots.size(), first = selectedRobot.ordinal();
-            
             StringBuilder sb = new StringBuilder("<html>");
-            sb.append(selectedRobot.getHTMLNamePlain());
-            Robot lastRobot = selectedRobot;
-            for(int i = (first + 1) % size; i != first; i = (i + 1) % size) {
-                Robot nextRobot = robots.get(i);
-                if(!nextRobot.isActive()) continue;
+            Robot lastRobot = null;
+            for(int i = first; i < first + size; i++) {
+                Robot robot = robots.get(i % size);
+                if(!robot.isActive()) continue;
                 
-                sb.append(" &larr; ").append(nextRobot.getHTMLNamePlain());
-                cs.send(nextRobot, lastRobot.follow);
-                lastRobot = nextRobot;
+                if(lastRobot == null) {
+                    //the first robot in the chain
+                    robot.send(RANDOM);
+                    log.printf("  leader: %s", robot);
+                } else {
+                    //a follower
+                    sb.append(" &larr; ");
+                    robot.send(lastRobot.follow);
+                    log.printf("  next:   %s", robot);
+                }
+                //append HTML, set leader for the next robot
+                sb.append(robot.getHTMLNamePlain());
+                lastRobot = robot;
             }
             sb.append("</html>");
-            label.setText(sb.toString());
+            if(lastRobot != null) label.setText(sb.toString());
+            else log.println("...no robot is active");
         } catch(IOException ex) {
             log.trace(ex);
         }
     }
     
+    /**
+     * Starts the application. The window can only be closed if debug is enabled.
+     */
     public static void main(String... args) throws IOException {
         CBCGUI gui = new CBCGUI();
         
@@ -151,6 +189,12 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
         frame.setVisible(true);
     }
     
+    /**
+     * <p>
+     * Robot status update thread. By {@linkplain #invoke() invoking} the BotStatus object, a status update will be
+     * printed immediately. Otherwise, a status update will occur every minute.
+     * </p>
+     */
     private class BotStatus extends Interruptible {
         public BotStatus(ExecutorService pool) {
             super(pool);
@@ -162,7 +206,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
                 try {
                     wait(60 * 1000);
                     log.println("Status update...");
-                    cs.sendAll(STATUS);
+                    sendAll(STATUS);
                 } catch(InterruptedException ex) {
                     log.trace(ex);
                 } catch(IOException ex) {

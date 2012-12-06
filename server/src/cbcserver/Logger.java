@@ -9,10 +9,10 @@ package cbcserver;
 
 /**
  * <p>
- * The class Logger.
+ * A simple Logger that prints an object name before the output.
  * </p>
  * 
- * @version V0.0 06.12.2012
+ * @version V1.0 06.12.2012
  * @author Clemens Koza
  */
 public class Logger {
@@ -33,7 +33,7 @@ public class Logger {
     }
     
     public void printf(String format, Object... args) {
-        System.out.printf(header + format, args);
+        System.out.printf(header + format + "%n", args);
     }
     
     public void trace(Throwable ex) {
