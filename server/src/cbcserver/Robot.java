@@ -14,10 +14,10 @@ import javax.swing.event.EventListenerList;
 
 
 public enum Robot {
-    RED("fo00", "fs00", "192.168.1.11"),
-    YELLOW("fo01", "fs01", "192.168.1.12"),
-    GREEN("fo02", "fs02", "192.168.1.13"),
-    BLUE("fo03", "fs03", "192.168.1.14");
+    RED("ROT", "fo00", "192.168.1.11"),
+    YELLOW("GELB", "fo01", "192.168.1.12"),
+    GREEN("GR&Uuml;N", "fo02", "192.168.1.13"),
+    BLUE("BLAU", "fo03", "192.168.1.14");
     
     private static Map<String, Robot> byAddress;
     
@@ -41,37 +41,35 @@ public enum Robot {
         }
     }
     
+    private final EventListenerList listeners = new EventListenerList();
+    private final String            displayName;
+    private final String            ip;
+    
     public final String             follow;
-    public final String             found;
-    public final String             ip;
-    public final Color              c;
     public final JToggleButton      button;
     
-    private final EventListenerList listeners = new EventListenerList();
-    
-    public RobotHandle             client;
     private boolean                 active    = false;
+    public RobotHandle              client;
     
-    private Robot(String follow, String found, String ip) {
+    private Robot(String displayName, String follow, String ip) {
+        this.displayName = displayName;
         this.follow = follow;
-        this.found = found;
         this.ip = ip;
-        this.c = getColor(name());
         
         button = new JToggleButton(getHTMLName());
         button.setActionCommand(name());
         button.setOpaque(true);
-        button.setBackground(c);
+        button.setBackground(getColor(name()));
         button.setEnabled(false);
         button.setFont(button.getFont().deriveFont(30.0f));
     }
     
     public String getHTMLName() {
-        return format("<html><font color=%s>%1$s</font></html>", name());
+        return format("<html><font color=%s>%s</font></html>", name(), displayName);
     }
     
     public String getHTMLNamePlain() {
-        return format("<font color=%s>%1$s</font>", name());
+        return format("<font color=%s>%s</font>", name(), displayName);
     }
     
     public boolean isActive() {
