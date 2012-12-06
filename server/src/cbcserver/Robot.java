@@ -42,6 +42,7 @@ public enum Robot {
     }
     
     private final EventListenerList listeners = new EventListenerList();
+    private final int               color;
     private final String            displayName;
     private final String            ip;
     
@@ -52,24 +53,22 @@ public enum Robot {
     public RobotHandle              client;
     
     private Robot(String displayName, String follow, String ip) {
+        Color color = getColor(name());
+        this.color = color.getRGB() & 0x00FFFFFF;
         this.displayName = displayName;
         this.follow = follow;
         this.ip = ip;
         
-        button = new JToggleButton(getHTMLName());
+        button = new JToggleButton("");
         button.setActionCommand(name());
         button.setOpaque(true);
-        button.setBackground(getColor(name()));
+        button.setBackground(color);
         button.setEnabled(false);
         button.setFont(button.getFont().deriveFont(30.0f));
     }
     
-    public String getHTMLName() {
-        return format("<html><font color=%s>%s</font></html>", name(), displayName);
-    }
-    
     public String getHTMLNamePlain() {
-        return format("<font color=%s>%s</font>", name(), displayName);
+        return format("<font color=#%06X>%s</font>", color, displayName);
     }
     
     public boolean isActive() {
