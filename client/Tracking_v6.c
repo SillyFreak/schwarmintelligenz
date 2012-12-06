@@ -91,7 +91,7 @@ void serial_put_byte(unsigned char ubyte)
 }
 
 // gets create's charge in mAh 0-3000
-int create_get_charge()
+uint16_t create_get_charge()
 {
     	int b;
     	char a=17;
@@ -109,6 +109,7 @@ int create_get_charge()
 void charge()
 {
 	printf("\nemty charge-function\n");
+	msleep("100");
 }
 
 
