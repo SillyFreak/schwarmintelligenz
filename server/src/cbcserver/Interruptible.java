@@ -33,7 +33,7 @@ public abstract class Interruptible implements Runnable {
         execute();
     }
     
-    public abstract void execute();
+    protected abstract void execute();
     
     public synchronized boolean isRunning() {
         return t != null;

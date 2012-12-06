@@ -2,31 +2,26 @@
 package cbcserver;
 
 
+import static cbcserver.CBCGUI.*;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 
-public class ConnectionServer extends Interruptible {
-    private static final Logger     log = new Logger("Server");
+public class SwarmServer extends Interruptible {
+    private static final Logger log = new Logger("Server");
     
-    private final int               port;
-    private final List<Robot>       robots;
+    private final int           port;
     
-    public final List<ClientThread> clientThreads;
-    
-    public ConnectionServer(ExecutorService pool, int port, List<Robot> robots) throws IOException {
+    public SwarmServer(ExecutorService pool, int port) throws IOException {
         super(pool);
         this.port = port;
-        this.robots = robots;
-        clientThreads = new ArrayList<ClientThread>();
         
         for(Enumeration<NetworkInterface> ni = NetworkInterface.getNetworkInterfaces(); ni.hasMoreElements();) {
             NetworkInterface iface = ni.nextElement();
@@ -40,65 +35,52 @@ public class ConnectionServer extends Interruptible {
     }
     
     @Override
-    public void execute() {
-        ServerSocket server = null;
+    protected void execute() {
+        ServerSocket ssock = null;
         try {
-            server = new ServerSocket(port);
+            ssock = new ServerSocket(port);
             log.println("now waiting for connections");
             
             while(isRunning()) {
                 try {
                     log.println("waiting for connection...");
-                    Socket socket = server.accept();
-                    String ip = socket.getInetAddress().getHostAddress();
-                    log.printf("accepting %s%n", ip);
-                    Robot robot = null;
-                    for(Robot r:robots) {
-                        if(ip.contains(r.ip)) {
-                            robot = r;
-                            break;
-                        }
-                    }
+                    Socket sock = ssock.accept();
+                    String addr = sock.getInetAddress().getHostAddress();
+                    log.printf("accepting %s%n", addr);
+                    
+                    Robot robot = Robot.getByAddress(addr);
                     if(robot == null) {
-                        log.printf("unknown address %s%n", ip);
+                        log.printf("unknown address %s%n", addr);
                     } else {
                         log.printf("%s connected%n", robot);
+                        (robot.client = new RobotHandle(pool, sock, robot)).start();
                     }
-                    ClientThread st = new ClientThread(pool, socket, this, robot);
-                    clientThreads.add(st);
-                    st.start();
                 } catch(InterruptedIOException ex) {
                     log.printf("interrupted: %s%n", ex);
                 } catch(IOException ex) {
                     log.trace(ex);
                 }
             }
-            log.println("server: exiting!");
+            log.println("exiting!");
         } catch(InterruptedIOException ex) {
             log.printf("interrupted: %s%n", ex);
         } catch(IOException ex) {
             log.trace(ex);
         } finally {
             try {
-                server.close();
+                ssock.close();
             } catch(IOException ex) {
                 log.trace(ex);
             }
         }
     }
     
-    public synchronized void send(Robot robot, String message) {
-        for(ClientThread s:clientThreads) {
-            if(s.robot == robot) {
-                s.send(message);
-                break;
-            }
-        }
+    public synchronized void send(Robot robot, String message) throws IOException {
+        robot.send(message);
     }
     
-    public synchronized void sendAll(String m) {
-        for(ClientThread s:clientThreads) {
-            s.send(m);
-        }
+    public synchronized void sendAll(String m) throws IOException {
+        for(Robot r:robots)
+            r.send(m);
     }
 }

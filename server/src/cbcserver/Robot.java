@@ -5,6 +5,9 @@ package cbcserver;
 import static java.lang.String.*;
 
 import java.awt.Color;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.JToggleButton;
 import javax.swing.event.EventListenerList;
@@ -13,8 +16,20 @@ import javax.swing.event.EventListenerList;
 public enum Robot {
     RED("fo00", "fs00", "192.168.1.11"),
     YELLOW("fo01", "fs01", "192.168.1.12"),
-    BLUE("fo03", "fs03", "192.168.1.14"),
-    GREEN("fo02", "fs02", "192.168.1.13");
+    GREEN("fo02", "fs02", "192.168.1.13"),
+    BLUE("fo03", "fs03", "192.168.1.14");
+    
+    private static Map<String, Robot> byAddress;
+    
+    static {
+        byAddress = new HashMap<String, Robot>();
+        for(Robot r:values())
+            byAddress.put(r.ip, r);
+    }
+    
+    public static Robot getByAddress(String addr) {
+        return byAddress.get(addr);
+    }
     
     private static Color getColor(String name) {
         try {
@@ -34,14 +49,14 @@ public enum Robot {
     
     private final EventListenerList listeners = new EventListenerList();
     
-    private boolean                 active;
+    public RobotHandle             client;
+    private boolean                 active    = false;
     
     private Robot(String follow, String found, String ip) {
         this.follow = follow;
         this.found = found;
         this.ip = ip;
         this.c = getColor(name());
-        this.active = false;
         
         button = new JToggleButton(getHTMLName());
         button.setActionCommand(name());
@@ -66,6 +81,10 @@ public enum Robot {
     public void setActive(boolean active) {
         this.active = active;
         fireChanged();
+    }
+    
+    public void send(String m) throws IOException {
+        if(active && client != null) client.send(m);
     }
     
     private void fireChanged() {
