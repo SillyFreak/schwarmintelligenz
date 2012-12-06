@@ -12,10 +12,13 @@ import java.util.concurrent.ExecutorService;
 
 /**
  * <p>
- * The class Interruptible.
+ * A with additional {@link #start()} and {@link #stop()} methods. The {@link #start()} method executes it using a
+ * provided {@link ExecutorService}, {@link #stop()} uses {@link Thread#interrupt() interrupt()} to interrupt the
+ * thread immediately; in addition, {@link #isRunning()} will subsequently return null, so that client code can
+ * respect the requested status.
  * </p>
  * 
- * @version V0.0 06.12.2012
+ * @version V1.0 06.12.2012
  * @author SillyFreak
  */
 public abstract class Interruptible implements Runnable {

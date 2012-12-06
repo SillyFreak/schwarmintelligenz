@@ -11,6 +11,14 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 
 
+/**
+ * <p>
+ * RobotHandle handles the network connection to a single robot.
+ * </p>
+ * 
+ * @version V1.0 06.12.2012
+ * @author SillyFreak
+ */
 public class RobotHandle extends Interruptible implements Commands {
     private final Logger     log;
     
@@ -36,11 +44,11 @@ public class RobotHandle extends Interruptible implements Commands {
     protected void execute() {
         try {
             for(String msg; (msg = in.readLine()) != null;) {
-                log.printf("received '%s'%n", msg);
+                log.printf("received '%s'", msg);
                 robot.setActive(msg.contains(ACTIVE));
             }
         } catch(Exception ex) {
-            log.printf("disconnected (%s)%n", ex);
+            log.printf("disconnected (%s)", ex);
         } finally {
             robot.setActive(false);
             robot.client = null;
@@ -56,8 +64,13 @@ public class RobotHandle extends Interruptible implements Commands {
         }
     }
     
+    /**
+     * <p>
+     * Sends a string message to the robot
+     * </p>
+     */
     public void send(String message) throws IOException {
-        log.printf("sending '%s'%n", message);
+        log.printf("sending '%s'", message);
         out.write(message);
         out.flush();
     }
