@@ -15,6 +15,8 @@ import java.util.concurrent.ExecutorService;
 
 
 public class ConnectionServer extends Interruptible {
+    private static final Logger     log = new Logger("Server");
+    
     private final int               port;
     private final List<Robot>       robots;
     
@@ -28,13 +30,13 @@ public class ConnectionServer extends Interruptible {
         
         for(Enumeration<NetworkInterface> ni = NetworkInterface.getNetworkInterfaces(); ni.hasMoreElements();) {
             NetworkInterface iface = ni.nextElement();
-            System.out.printf("server: network interface: %s%n", iface.getDisplayName());
+            log.printf("network interface: %s%n", iface.getDisplayName());
             for(Enumeration<InetAddress> ia = iface.getInetAddresses(); ia.hasMoreElements();) {
                 InetAddress address = ia.nextElement();
-                System.out.printf("server:   IP: %s%n", address.getHostAddress());
+                log.printf("  IP: %s%n", address.getHostAddress());
             }
         }
-        System.out.printf("server: socket on port %d%n", port);
+        log.printf("socket on port %d%n", port);
     }
     
     @Override
@@ -42,14 +44,14 @@ public class ConnectionServer extends Interruptible {
         ServerSocket server = null;
         try {
             server = new ServerSocket(port);
-            System.out.println("server: now waiting for connections");
+            log.println("now waiting for connections");
             
             while(isRunning()) {
                 try {
-                    System.out.println("server: waiting for connection...");
+                    log.println("waiting for connection...");
                     Socket socket = server.accept();
-                    String ip = socket.getInetAddress().toString();
-                    System.out.printf("server: accepting %s%n", ip);
+                    String ip = socket.getInetAddress().getHostAddress();
+                    log.printf("accepting %s%n", ip);
                     Robot robot = null;
                     for(Robot r:robots) {
                         if(ip.contains(r.ip)) {
@@ -58,29 +60,29 @@ public class ConnectionServer extends Interruptible {
                         }
                     }
                     if(robot == null) {
-                        System.out.printf("server: unknown address %s%n", ip);
+                        log.printf("unknown address %s%n", ip);
                     } else {
-                        System.out.printf("server: %s connected%n", robot);
+                        log.printf("%s connected%n", robot);
                     }
                     ClientThread st = new ClientThread(pool, socket, this, robot);
                     clientThreads.add(st);
                     st.start();
                 } catch(InterruptedIOException ex) {
-                    System.out.printf("server: interrupted: %s%n", ex);
+                    log.printf("interrupted: %s%n", ex);
                 } catch(IOException ex) {
-                    ex.printStackTrace();
+                    log.trace(ex);
                 }
             }
-            System.out.println("server: exiting!");
+            log.println("server: exiting!");
         } catch(InterruptedIOException ex) {
-            System.out.printf("server: interrupted: %s%n", ex);
+            log.printf("interrupted: %s%n", ex);
         } catch(IOException ex) {
-            ex.printStackTrace();
+            log.trace(ex);
         } finally {
             try {
                 server.close();
             } catch(IOException ex) {
-                ex.printStackTrace();
+                log.trace(ex);
             }
         }
     }
