@@ -18,3 +18,9 @@
 
 # backup files
 *~
+
+# Java classes
+*.class
+
+# Mac file metadata
+._*
