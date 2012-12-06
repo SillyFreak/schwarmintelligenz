@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutorService;
 
 
 public class ClientThread extends Interruptible implements Commands {
+    private final Logger       log;
     
     protected Socket           client;
     protected ConnectionServer server;
@@ -19,14 +20,15 @@ public class ClientThread extends Interruptible implements Commands {
     
     public ClientThread(ExecutorService pool, Socket client, ConnectionServer server, Robot robot) {
         super(pool);
+        log = new Logger(robot.toString());
         this.client = client;
         this.server = server;
         this.robot = robot;
         try {
             out = new PrintWriter(client.getOutputStream());
             in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-        } catch(Exception e) {
-            e.printStackTrace();
+        } catch(Exception ex) {
+            log.trace(ex);
         }
     }
     
@@ -34,11 +36,11 @@ public class ClientThread extends Interruptible implements Commands {
     public void execute() {
         try {
             for(String m; (m = in.readLine()) != null;) {
-                System.out.printf("client: %s received: '%s'%n", robot, m);
+                log.printf("received '%s'%n", m);
                 robot.setActive(m.contains(ACTIVE));
             }
         } catch(Exception ex) {
-            System.out.printf("client: %s disconnected (%s)%n", robot, ex);
+            log.printf("disconnected (%s)%n", robot, ex);
             robot.setActive(false);
             server.clientThreads.remove(this);
             try {
@@ -50,7 +52,7 @@ public class ClientThread extends Interruptible implements Commands {
     }
     
     public void send(String message) {
-        System.out.printf("client: %s sent: '%s'%n", robot, message);
+        log.printf("sent '%s'%n", message);
         out.write(message);
         out.flush();
     }

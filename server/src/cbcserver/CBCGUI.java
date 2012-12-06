@@ -25,7 +25,8 @@ import javax.swing.JToggleButton;
 public final class CBCGUI extends JPanel implements Commands, ChangedListener, Runnable {
     private static final long      serialVersionUID = -2620534937798975690L;
     
-    public static int              PORT             = 28109;
+    private static final Logger    log              = new Logger("CBCGUI");
+    public static final int        PORT             = 28109;
     
     private final ConnectionServer cs;
     
@@ -63,7 +64,7 @@ public final class CBCGUI extends JPanel implements Commands, ChangedListener, R
     
     @Override
     public void change(Robot robot) {
-        System.out.printf("gui:    %s: %s%n", robot.name(), robot.isActive()? "active":"inactive");
+        log.printf("%s %s%n", robot.name(), robot.isActive()? "active":"inactive");
         robot.button.setEnabled(robot.isActive());
         orderRobots();
     }
@@ -111,7 +112,7 @@ public final class CBCGUI extends JPanel implements Commands, ChangedListener, R
                     }
                 }
             } catch(InterruptedException ex) {
-                ex.printStackTrace();
+                log.trace(ex);
             }
             
         }
