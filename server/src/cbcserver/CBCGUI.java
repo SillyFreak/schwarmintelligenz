@@ -1,156 +1,128 @@
+
 package cbcserver;
+
+
+import static java.util.Arrays.*;
+import static java.util.Collections.*;
 
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.List;
+import java.util.concurrent.Executors;
+
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JToggleButton;
-import javax.swing.border.Border;
 
-public final class CBCGUI extends JPanel implements Commands, Observer, Runnable {
 
-    public static int PORT = 28109;
-    public ArrayList<Robot> robots;
-    private JToggleButton[] button;
-    private JLabel label;
-    private ConnectionServer cs;
-    private Robot selectedRobot;
-
-    public CBCGUI() {
-        this.setLayout(new BorderLayout());
-        robots = Robot.getAllRobots();
-        button = new JToggleButton[Robot.ANZAHL];
+public final class CBCGUI extends JPanel implements Commands, ChangedListener, Runnable {
+    private static final long      serialVersionUID = -2620534937798975690L;
+    
+    public static int              PORT             = 28109;
+    
+    private final ConnectionServer cs;
+    
+    private final List<Robot>      robots;
+    private final JLabel           label;
+    private Robot                  selectedRobot;
+    
+    public CBCGUI() throws IOException {
+        super(new BorderLayout(10, 10));
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        robots = unmodifiableList(asList(Robot.values()));
+        
+        JPanel center = new JPanel(new GridLayout(1, 0, 3, 3));
         ButtonListener bl = new ButtonListener();
-        Border border = BorderFactory.createEmptyBorder(10, 10, 10, 10);
-        JPanel center = new JPanel();
-        center.setBorder(border);
-        center.setLayout(new GridLayout(1, Robot.ANZAHL));
-        this.add(center, BorderLayout.CENTER);
-        for (int i = 0; i < button.length; i++) {
+        ButtonGroup g = new ButtonGroup();
+        for(int i = 0; i < robots.size(); i++) {
             Robot r = robots.get(i);
-            button[i] = new JToggleButton(r.getHTMLName());
-            button[i].addActionListener(bl);
-            button[i].setOpaque(true);
-            button[i].setBackground(r.c);
-            button[i].setEnabled(false);
-            button[i].setFont(button[i].getFont().deriveFont(30.0f));
-            r.addObserver(this);
-            center.add(button[i]);
+            JToggleButton b = r.button;
+            g.add(b);
+            b.addActionListener(bl);
+            r.addChangedListener(this);
+            center.add(b);
         }
+        add(center, BorderLayout.CENTER);
+        
         label = new JLabel("Choose the first");
-        label.setBorder(border);
         label.setHorizontalAlignment(JLabel.CENTER);
-        label.setFont(label.getFont().deriveFont(30.0f));
+        label.setFont(label.getFont().deriveFont(30f));
         this.add(label, BorderLayout.SOUTH);
-        cs = new ConnectionServer(PORT, robots);
+        cs = new ConnectionServer(Executors.newCachedThreadPool(), PORT, robots);
+        cs.start();
         new Thread(this).start();
     }
-
+    
     @Override
-    public void update(Observable o, Object o1) {
-        Robot robot = (Robot) o;
-        System.out.println(robot.n + ": " + (robot.isActive() ? "active" : "inactive"));
-        for (JToggleButton b : button) {
-            if (b.getText().equals(robot.getHTMLName())) {
-
-                if (robot.isActive()) {
-                    //b.setBackground(Color.green);
-                    b.setEnabled(true);
-                } else {
-                    //b.setBackground(Color.red);
-                    b.setEnabled(false);
-                }
-                break;
-            }
-        }
+    public void change(Robot robot) {
+        System.out.printf("gui:    %s: %s%n", robot.name(), robot.isActive()? "active":"inactive");
+        robot.button.setEnabled(robot.isActive());
         orderRobots();
     }
-
+    
     public class ButtonListener implements ActionListener {
-
         @Override
         public void actionPerformed(ActionEvent ae) {
-            JToggleButton theButton = (JToggleButton) (ae.getSource());
-            if (!theButton.isSelected()) { // Already Pressed?
-                theButton.setSelected(true);
-                return;
-            }
-            String color = ae.getActionCommand();
-            for (Robot r : robots) {
-                if (r.getHTMLName().equals(color)) {
-                    selectedRobot = r;
-                    break;
-                }
-            }
-            if (selectedRobot.isActive()) {
-                orderRobots();
-                for (JToggleButton b : button) {
-                    b.setSelected(false);
-                }
-                theButton.setSelected(true);
-            } else {
-                theButton.setSelected(false);
-            }
+            if(!((AbstractButton) ae.getSource()).isSelected()) return;
+            
+            selectedRobot = Robot.valueOf(ae.getActionCommand());
+            
+            if(selectedRobot.isActive()) orderRobots();
         }
     }
-
+    
     public void orderRobots() {
-        if (selectedRobot == null) {
-            return;
-        }
-        String text = "<html>" + selectedRobot.getHTMLNamePlain();
+        if(selectedRobot == null) return;
         cs.send(selectedRobot, RANDOM);
-        int i = selectedRobot.number + 1;
-        if (i >= Robot.ANZAHL) {
-            i = 0;
-        }
+        
+        int size = robots.size(), first = selectedRobot.ordinal();
+        
+        StringBuilder sb = new StringBuilder("<html>");
+        sb.append(selectedRobot.getHTMLNamePlain());
         Robot lastRobot = selectedRobot;
-        while (i != selectedRobot.number) {
+        for(int i = (first + 1) % size; i != first; i = (i + 1) % size) {
             Robot nextRobot = robots.get(i);
-            if (nextRobot.isActive()) {
-                text += " &larr " + nextRobot.getHTMLNamePlain();
-                cs.send(nextRobot, lastRobot.follow);
-                lastRobot = nextRobot;
-            }
-            i++;
-            if (i >= Robot.ANZAHL) {
-                i = 0;
-            }
+            if(!nextRobot.isActive()) continue;
+            
+            sb.append(" &larr; ").append(nextRobot.getHTMLNamePlain());
+            cs.send(nextRobot, lastRobot.follow);
+            lastRobot = nextRobot;
         }
-        label.setText(text + "</html>");
+        sb.append("</html>");
+        label.setText(sb.toString());
     }
-
+    
     @Override
     public void run() {
-        while (!Thread.interrupted()) {
+        while(!Thread.interrupted()) {
             try {
                 Thread.sleep(60 * 1000);
-                for (Robot r : robots) {
-                    if (r.isActive()) {
+                for(Robot r:robots) {
+                    if(r.isActive()) {
                         cs.send(r, STATUS);
                     }
                 }
-            } catch (InterruptedException ex) {
+            } catch(InterruptedException ex) {
                 ex.printStackTrace();
             }
-
+            
         }
     }
-
-    public static void main(String... args) {
+    
+    public static void main(String... args) throws IOException {
+        CBCGUI gui = new CBCGUI();
+        
         JFrame frame = new JFrame("CBC Manager");
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        frame.add(new CBCGUI());
+        frame.add(gui);
         frame.setSize(1000, 400);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);

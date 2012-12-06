@@ -1,61 +1,90 @@
+
 package cbcserver;
 
+
+import static java.lang.String.*;
+
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.Observable;
 
-public class Robot extends Observable{
+import javax.swing.JToggleButton;
+import javax.swing.event.EventListenerList;
 
-    public static final int ANZAHL = 4;
-    String n;
-    int number;
-    String follow;
-    String found;
-    String ip;
-    Color c;
-    private boolean active;
 
-    private Robot(String n, int number, String follow, String found, String ip, Color c) {
-        this.n = n;
-        this.number = number;
+public enum Robot {
+    RED("fo00", "fs00", "192.168.1.11"),
+    YELLOW("fo01", "fs01", "192.168.1.12"),
+    BLUE("fo03", "fs03", "192.168.1.14"),
+    GREEN("fo02", "fs02", "192.168.1.13");
+    
+    private static Color getColor(String name) {
+        try {
+            return (Color) Color.class.getField(name).get(null);
+        } catch(IllegalAccessException ex) {
+            throw new AssertionError(ex);
+        } catch(NoSuchFieldException ex) {
+            return null;
+        }
+    }
+    
+    public final String             follow;
+    public final String             found;
+    public final String             ip;
+    public final Color              c;
+    public final JToggleButton      button;
+    
+    private final EventListenerList listeners = new EventListenerList();
+    
+    private boolean                 active;
+    
+    private Robot(String follow, String found, String ip) {
         this.follow = follow;
         this.found = found;
         this.ip = ip;
-        this.c = c;
+        this.c = getColor(name());
         this.active = false;
-    }
-
-    public static ArrayList<Robot> getAllRobots() {
-        ArrayList<Robot> r = new ArrayList<Robot>(Robot.ANZAHL);
-        r.add(new Robot("PINK", 0, "fo00", "fs00","192.168.1.11", Color.PINK));
-        r.add(new Robot("ORANGE", 1, "fo01", "fs01", "192.168.1.12", Color.ORANGE));
-        r.add(new Robot("GREEN", 2, "fo02", "fs02", "192.168.1.13", Color.GREEN));
-        r.add(new Robot("BLUE", 3, "fo03", "fs03", "192.168.1.14", Color.BLUE));
-        return r;
+        
+        button = new JToggleButton(getHTMLName());
+        button.setActionCommand(name());
+        button.setOpaque(true);
+        button.setBackground(c);
+        button.setEnabled(false);
+        button.setFont(button.getFont().deriveFont(30.0f));
     }
     
-    public String getHTMLName(){
-        return "<html>"+getHTMLNamePlain()+"</html>";
+    public String getHTMLName() {
+        return format("<html><font color=%s>%1$s</font></html>", name());
     }
     
-    public String getHTMLNamePlain(){
-        return "<font color="+n+">"+n+"</font>";
+    public String getHTMLNamePlain() {
+        return format("<font color=%s>%1$s</font>", name());
     }
-
-    /**
-     * @return the active
-     */
+    
     public boolean isActive() {
         return active;
     }
-
-    /**
-     * @param active the active to set
-     */
+    
     public void setActive(boolean active) {
         this.active = active;
-        super.setChanged();
-        super.notifyObservers(null);
+        fireChanged();
     }
-
+    
+    private void fireChanged() {
+        // Guaranteed to return a non-null array
+        Object[] l = listeners.getListenerList();
+        // Process the listeners last to first, notifying
+        // those that are interested in this event
+        for(int i = l.length - 2; i >= 0; i -= 2) {
+            if(l[i] == ChangedListener.class) {
+                ((ChangedListener) l[i + 1]).change(this);
+            }
+        }
+    }
+    
+    public void addChangedListener(ChangedListener l) {
+        listeners.add(ChangedListener.class, l);
+    }
+    
+    public void removeChangedListener(ChangedListener l) {
+        listeners.remove(ChangedListener.class, l);
+    }
 }

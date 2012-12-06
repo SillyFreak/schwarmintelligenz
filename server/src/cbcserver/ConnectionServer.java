@@ -1,83 +1,101 @@
+
 package cbcserver;
 
+
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
 
-public class ConnectionServer implements Runnable {
 
-    protected ServerSocket server;
-    protected Thread connectionThread;
-    public ArrayList<Robot> robots;
-    public ArrayList<ClientThread> clientThreads;
-
-    public ConnectionServer(int port, ArrayList<Robot> robots) {
+public class ConnectionServer extends Interruptible {
+    private final int               port;
+    private final List<Robot>       robots;
+    
+    public final List<ClientThread> clientThreads;
+    
+    public ConnectionServer(ExecutorService pool, int port, List<Robot> robots) throws IOException {
+        super(pool);
+        this.port = port;
         this.robots = robots;
         clientThreads = new ArrayList<ClientThread>();
-
+        
+        for(Enumeration<NetworkInterface> ni = NetworkInterface.getNetworkInterfaces(); ni.hasMoreElements();) {
+            NetworkInterface iface = ni.nextElement();
+            System.out.printf("server: network interface: %s%n", iface.getDisplayName());
+            for(Enumeration<InetAddress> ia = iface.getInetAddresses(); ia.hasMoreElements();) {
+                InetAddress address = ia.nextElement();
+                System.out.printf("server:   IP: %s%n", address.getHostAddress());
+            }
+        }
+        System.out.printf("server: socket on port %d%n", port);
+    }
+    
+    @Override
+    public void execute() {
+        ServerSocket server = null;
         try {
-            System.out.println("Serversocket auf Port " + port);
-            String hostAddress = InetAddress.getLocalHost().getHostAddress();
-            InetAddress[] inetAddresses = InetAddress.getAllByName(hostAddress);
-            for (InetAddress inetAddress : inetAddresses) {
-                System.out.println("IP: "+inetAddress.getHostAddress());
-            }
             server = new ServerSocket(port);
-        } catch (UnknownHostException ex) {
-            ex.printStackTrace();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        connectionThread = new Thread(this);
-        connectionThread.start();
-    }
-
-    public void run() {
-        while (!Thread.interrupted()) {
-            try {
-                Socket socket = server.accept();
-                String ip = socket.getInetAddress().toString();
-                Robot robot = null;
-                for (Robot r : robots) {
-                    if (ip.contains(r.ip)) {
-                        robot = r;
-                        break;
+            System.out.println("server: now waiting for connections");
+            
+            while(isRunning()) {
+                try {
+                    System.out.println("server: waiting for connection...");
+                    Socket socket = server.accept();
+                    String ip = socket.getInetAddress().toString();
+                    System.out.printf("server: accepting %s%n", ip);
+                    Robot robot = null;
+                    for(Robot r:robots) {
+                        if(ip.contains(r.ip)) {
+                            robot = r;
+                            break;
+                        }
                     }
+                    if(robot == null) {
+                        System.out.printf("server: unknown address %s%n", ip);
+                    } else {
+                        System.out.printf("server: %s connected%n", robot);
+                    }
+                    ClientThread st = new ClientThread(pool, socket, this, robot);
+                    clientThreads.add(st);
+                    st.start();
+                } catch(InterruptedIOException ex) {
+                    System.out.printf("server: interrupted: %s%n", ex);
+                } catch(IOException ex) {
+                    ex.printStackTrace();
                 }
-                if (robot == null) {
-                    System.out.println("Roboter-Adresse " + ip + " nicht gefunden");
-                } else {
-                    System.out.println(robot.n + " connected");
-                }
-                ClientThread st = new ClientThread(socket, this, robot);
-                clientThreads.add(st);
-            } catch (IOException e) {
-                e.printStackTrace();
+            }
+            System.out.println("server: exiting!");
+        } catch(InterruptedIOException ex) {
+            System.out.printf("server: interrupted: %s%n", ex);
+        } catch(IOException ex) {
+            ex.printStackTrace();
+        } finally {
+            try {
+                server.close();
+            } catch(IOException ex) {
+                ex.printStackTrace();
             }
         }
     }
-
-    public void close() throws IOException {
-        if (connectionThread.isAlive()) {
-            connectionThread.interrupt();
-        }
-        server.close();
-    }
-
+    
     public synchronized void send(Robot robot, String message) {
-        for (ClientThread s : clientThreads) {
-            if (s.robot == robot) {
+        for(ClientThread s:clientThreads) {
+            if(s.robot == robot) {
                 s.send(message);
                 break;
             }
         }
     }
-
+    
     public synchronized void sendAll(String m) {
-        for (ClientThread s : clientThreads) {
+        for(ClientThread s:clientThreads) {
             s.send(m);
         }
     }
