@@ -17,55 +17,81 @@ import java.util.concurrent.Executors;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JRootPane;
 import javax.swing.JToggleButton;
 
 
-public final class CBCGUI extends JPanel implements Commands, ChangedListener, ActionListener {
+public final class CBCGUI extends JRootPane implements Commands, ChangedListener, ActionListener {
     private static final long       serialVersionUID = -2620534937798975690L;
     
     public static final int         PORT             = 28109;
     public static final List<Robot> robots           = unmodifiableList(asList(Robot.values()));
-    private static final Logger     log              = new Logger("CBCGUI");
     
-    private final JButton           label;
+    private static final Logger     log              = new Logger("CBCGUI");
+    private static final boolean    debug            = true;
+    
+    private final JMenuItem         status;
+    private final JLabel            label;
     
     private final ExecutorService   pool;
-    private final SwarmServer  cs;
-    private final BotStatus         status;
+    private final SwarmServer       cs;
+    private final BotStatus         bots;
     
     private Robot                   selectedRobot;
     
     public CBCGUI() throws IOException {
-        super(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JComponent p = (JComponent) getContentPane();
+        p.setLayout(new BorderLayout(10, 10));
+        p.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        
-        JPanel center = new JPanel(new GridLayout(1, 0, 3, 3));
-        ButtonGroup g = new ButtonGroup();
-        for(int i = 0; i < robots.size(); i++) {
-            Robot r = robots.get(i);
-            r.addChangedListener(this);
+        //debug menu
+        if(debug) {
+            status = new JMenuItem("Request Status");
+            status.addActionListener(this);
             
-            JToggleButton b = r.button;
-            b.addActionListener(this);
-            g.add(b);
-            center.add(b);
+            JMenu debug = new JMenu("Debug");
+            debug.add(status);
+            
+            JMenuBar bar = new JMenuBar();
+            bar.add(debug);
+            
+            setJMenuBar(bar);
+        } else status = null;
+        
+        { //center panel
+            JPanel center = new JPanel(new GridLayout(1, 0, 3, 3));
+            ButtonGroup g = new ButtonGroup();
+            for(int i = 0; i < robots.size(); i++) {
+                Robot r = robots.get(i);
+                r.addChangedListener(this);
+                
+                JToggleButton b = r.button;
+                b.addActionListener(this);
+                g.add(b);
+                center.add(b);
+            }
+            p.add(center, BorderLayout.CENTER);
         }
-        add(center, BorderLayout.CENTER);
         
-        label = new JButton("Choose the first");
-        label.addActionListener(this);
-        label.setHorizontalAlignment(JLabel.CENTER);
-        label.setFont(label.getFont().deriveFont(30f));
-        add(label, BorderLayout.SOUTH);
+        { //status label
+            label = new JLabel("<html>W&auml;hle den Anf&uuml;hrer</html>");
+            label.setHorizontalAlignment(JLabel.CENTER);
+            label.setFont(label.getFont().deriveFont(30f));
+            p.add(label, BorderLayout.SOUTH);
+        }
         
-        pool = Executors.newCachedThreadPool();
-        (cs = new SwarmServer(pool, PORT)).start();
-        (status = new BotStatus(pool)).start();
+        { //start server and status update thread
+            pool = Executors.newCachedThreadPool();
+            (cs = new SwarmServer(pool, PORT)).start();
+            (bots = new BotStatus(pool)).start();
+        }
     }
     
     @Override
@@ -77,8 +103,8 @@ public final class CBCGUI extends JPanel implements Commands, ChangedListener, A
     
     @Override
     public void actionPerformed(ActionEvent ae) {
-        if(ae.getSource() == label) {
-            status.invoke();
+        if(ae.getSource() == status) {
+            bots.invoke();
             return;
         }
         
@@ -118,7 +144,7 @@ public final class CBCGUI extends JPanel implements Commands, ChangedListener, A
         CBCGUI gui = new CBCGUI();
         
         JFrame frame = new JFrame("CBC Manager");
-        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        frame.setDefaultCloseOperation(debug? JFrame.EXIT_ON_CLOSE:JFrame.DO_NOTHING_ON_CLOSE);
         frame.add(gui);
         frame.setSize(1000, 400);
         frame.setLocationRelativeTo(null);
