@@ -9,6 +9,8 @@ import static java.util.Collections.*;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.LinearGradientPaint;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -85,8 +87,9 @@ public enum Robot {
         this.follow = follow;
         this.ip = ip;
         
-        button = new JToggleButton("<html>" + displayName + "</html>");
-        button.setIcon(new ToggleIcon(color, color.darker(), Color.LIGHT_GRAY));
+        button = new JToggleButton();
+        button.setIcon(new ToggleIcon(this));
+        button.setForeground(Color.GRAY);
         button.setFocusPainted(false);
         button.setActionCommand(name());
         button.setFont(button.getFont().deriveFont(30f));
@@ -110,7 +113,7 @@ public enum Robot {
     public void setActive(boolean active) {
         this.active = active;
         button.setEnabled(active);
-        button.setForeground(active? color:Color.BLACK);
+        button.setText(active? "":"<html>" + displayName + "</html>");
         fireChanged();
     }
     
@@ -153,21 +156,32 @@ public enum Robot {
         listeners.remove(ChangedListener.class, l);
     }
     
+    /**
+     * Icon that paints a color dependent on the enablead & selected state
+     */
     private static class ToggleIcon implements Icon {
-        private final Color normal, selected, disabled;
+        private static final float[] floats = {0, 1};
+        private final Color[]        normal, selected, disabled;
         
-        public ToggleIcon(Color normal, Color selected, Color disabled) {
-            this.normal = normal;
-            this.selected = selected;
-            this.disabled = disabled;
+        public ToggleIcon(Robot r) {
+            Color color = r.color;
+            Color darker = color.darker();
+            Color ddarker = darker.darker();
+            
+            normal = new Color[] {color, darker};
+            selected = new Color[] {ddarker, color};
+            disabled = new Color[] {Color.LIGHT_GRAY, Color.GRAY};
         }
         
         @Override
         public void paintIcon(Component c, Graphics g, int x, int y) {
             JToggleButton b = (JToggleButton) c;
+            Graphics2D g2d = (Graphics2D) g;
             
-            g.setColor(!b.isEnabled()? disabled:b.isSelected()? selected:normal);
-            g.fillRect(0, 0, b.getWidth(), b.getHeight());
+            Color[] colors = !b.isEnabled()? disabled:b.isSelected()? selected:normal;
+            int w = b.getWidth(), h = b.getHeight();
+            g2d.setPaint(new LinearGradientPaint(w * .4f, h * .05f, w * .6f, h * .95f, floats, colors));
+            g2d.fillRect(0, 0, w, h);
         }
         
         @Override
