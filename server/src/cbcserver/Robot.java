@@ -7,11 +7,14 @@ import static java.util.Arrays.*;
 import static java.util.Collections.*;
 
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Graphics;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.Icon;
 import javax.swing.JToggleButton;
 import javax.swing.event.EventListenerList;
 
@@ -72,7 +75,7 @@ public enum Robot {
     public final String             follow;
     public final JToggleButton      button;
     
-    private boolean                 active    = true;
+    private boolean                 active;
     public RobotHandle              client;
     
     private Robot(String displayName, String follow, String ip) {
@@ -82,12 +85,13 @@ public enum Robot {
         this.follow = follow;
         this.ip = ip;
         
-        button = new JToggleButton("");
+        button = new JToggleButton("<html>" + displayName + "</html>");
+        button.setIcon(new ToggleIcon(color, color.darker(), Color.LIGHT_GRAY));
+        button.setFocusPainted(false);
         button.setActionCommand(name());
-        button.setOpaque(true);
-        button.setBackground(color);
-        button.setEnabled(active);
-        button.setFont(button.getFont().deriveFont(30.0f));
+        button.setFont(button.getFont().deriveFont(30f));
+        
+        setActive(active);
     }
     
     public String getHTMLNamePlain() {
@@ -106,6 +110,7 @@ public enum Robot {
     public void setActive(boolean active) {
         this.active = active;
         button.setEnabled(active);
+        button.setForeground(active? color:Color.BLACK);
         fireChanged();
     }
     
@@ -146,5 +151,33 @@ public enum Robot {
     
     public void removeChangedListener(ChangedListener l) {
         listeners.remove(ChangedListener.class, l);
+    }
+    
+    private static class ToggleIcon implements Icon {
+        private final Color normal, selected, disabled;
+        
+        public ToggleIcon(Color normal, Color selected, Color disabled) {
+            this.normal = normal;
+            this.selected = selected;
+            this.disabled = disabled;
+        }
+        
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            JToggleButton b = (JToggleButton) c;
+            
+            g.setColor(!b.isEnabled()? disabled:b.isSelected()? selected:normal);
+            g.fillRect(0, 0, b.getWidth(), b.getHeight());
+        }
+        
+        @Override
+        public int getIconWidth() {
+            return 0;
+        }
+        
+        @Override
+        public int getIconHeight() {
+            return 0;
+        }
     }
 }
