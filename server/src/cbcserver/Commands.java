@@ -11,15 +11,15 @@ package cbcserver;
  * @author Clemens Koza
  */
 public interface Commands {
-    public static String STOP      = "ao00";
-    public static String FORWARD   = "ao01";
-    public static String BACKWARD  = "ao02";
-    public static String LEFT      = "ao03";
-    public static String RIGHT     = "ao04";
-    public static String RECONNECT = "ao05";
-    public static String RANDOM    = "fo04";
+    public static final String STOP      = "ao00";
+    public static final String FORWARD   = "ao01";
+    public static final String BACKWARD  = "ao02";
+    public static final String LEFT      = "ao03";
+    public static final String RIGHT     = "ao04";
+    public static final String RECONNECT = "ao05";
+    public static final String RANDOM    = "fo04";
     
-    public static String ACTIVE    = "actv";
-    public static String INACTIVE  = "iact";
-    public static String STATUS    = "stat";
+    public static final String ACTIVE    = "actv";
+    public static final String INACTIVE  = "iact";
+    public static final String STATUS    = "stat";
 }
