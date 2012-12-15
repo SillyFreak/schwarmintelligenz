@@ -5,25 +5,26 @@ package cbcserver;
 import static cbcserver.Robot.*;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JRootPane;
 import javax.swing.JToggleButton;
+import javax.swing.JToolBar;
+import javax.swing.SwingConstants;
+
+import cbcserver.actions.LeaderAction;
+import cbcserver.actions.StatusAction;
 
 
 /**
@@ -35,15 +36,14 @@ import javax.swing.JToggleButton;
  * @version V1.0 06.12.2012
  * @author Clemens Koza
  */
-public final class CBCGUI extends JRootPane implements Commands, ChangedListener, ActionListener {
+public final class CBCGUI extends JRootPane implements Commands, ChangedListener {
     private static final long     serialVersionUID = -2620534937798975690L;
     
     public static final int       PORT             = 28109;
     
     private static final Logger   log              = new Logger("CBCGUI");
-    private static final boolean  debug            = true;
+    private static boolean        debug            = false;
     
-    private final JMenuItem       status;
     private final JLabel          label;
     
     private final ExecutorService pool;
@@ -52,35 +52,27 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
     private Robot                 selectedRobot;
     
     public CBCGUI() throws IOException {
-        JComponent p = (JComponent) getContentPane();
-        p.setLayout(new BorderLayout(10, 10));
+        JPanel p = new JPanel(new BorderLayout(10, 10));
         p.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        getContentPane().add(p);
         
         //debug menu
-        if(debug) {
-            status = new JMenuItem("Request Status");
-            status.addActionListener(this);
-            
-            JMenu debug = new JMenu("Debug");
-            debug.add(status);
-            
-            JMenuBar bar = new JMenuBar();
-            bar.add(debug);
-            
-            setJMenuBar(bar);
-        } else status = null;
+        if(debug) makeJToolBar();
         
         { //center panel
             JPanel center = new JPanel(new GridLayout(1, 0, 3, 3));
             ButtonGroup g = new ButtonGroup();
             for(int i = 0; i < robots.size(); i++) {
                 Robot r = robots.get(i);
-                r.addChangedListener(this);
                 
-                JToggleButton b = r.button;
-                b.addActionListener(this);
+                JToggleButton b = new JToggleButton(r.action = new LeaderAction(this, r));
+                b.setForeground(Color.GRAY);
+                b.setFocusPainted(false);
+                b.setFont(b.getFont().deriveFont(30f));
                 g.add(b);
                 center.add(b);
+                
+                r.action.addChangedListener(this);
             }
             p.add(center, BorderLayout.CENTER);
         }
@@ -99,6 +91,17 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
         }
     }
     
+    private void makeJToolBar() {
+        JToolBar bar = new JToolBar(SwingConstants.VERTICAL);
+        
+        for(int i = 0; i < robots.size(); i++)
+            bar.add(robots.get(i).receive);
+        
+        bar.add(new StatusAction(this));
+        
+        getContentPane().add(bar, BorderLayout.WEST);
+    }
+    
     /**
      * {@inheritDoc}
      * 
@@ -108,27 +111,22 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
      */
     @Override
     public void change(Robot robot) {
-        log.printf("%s %s", robot.name(), robot.isActive()? "active":"inactive");
+        log.printf("%s %s", robot.name(), robot.action.isEnabled()? "active":"inactive");
         orderRobots();
     }
     
+    public void requestStatus() {
+        bots.invoke();
+    }
+    
     /**
-     * {@inheritDoc}
-     * 
      * <p>
      * If a toggle button was pressed, selects a robot to be the leader, and re-orders them. For the debug-button,
      * the status update is invoked.
      * </p>
      */
-    @Override
-    public void actionPerformed(ActionEvent ae) {
-        if(ae.getSource() == status) {
-            bots.invoke();
-            return;
-        }
-        
-        if(!((AbstractButton) ae.getSource()).isSelected()) return;
-        selectedRobot = Robot.valueOf(ae.getActionCommand());
+    public void setLeader(Robot r) {
+        selectedRobot = r;
         orderRobots();
     }
     
@@ -151,7 +149,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             Robot lastRobot = null;
             for(int i = first; i < first + size; i++) {
                 Robot robot = robots.get(i % size);
-                if(!robot.isActive()) continue;
+                if(!robot.action.isEnabled()) continue;
                 
                 if(lastRobot == null) {
                     //the first robot in the chain
@@ -179,6 +177,8 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
      * Starts the application. The window can only be closed if debug is enabled.
      */
     public static void main(String... args) throws IOException {
+        if(args.length == 1) debug = "debug".equals(args[0]);
+        
         CBCGUI gui = new CBCGUI();
         
         JFrame frame = new JFrame("CBC Manager");
@@ -186,6 +186,20 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
         frame.add(gui);
         frame.setSize(1000, 400);
         frame.setLocationRelativeTo(null);
+        
+        
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        if(!debug) {
+            frame.setUndecorated(true);
+            frame.setAlwaysOnTop(true);
+            frame.setResizable(false);
+            
+            GraphicsDevice device = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+            System.out.println("Fullscreen: " + device.isFullScreenSupported());
+            if(device.isFullScreenSupported()) {
+                device.setFullScreenWindow(frame);
+            }
+        }
         frame.setVisible(true);
     }
     

@@ -45,12 +45,12 @@ public class RobotHandle extends Interruptible implements Commands {
         try {
             for(String msg; (msg = in.readLine()) != null;) {
                 log.printf("received '%s'", msg);
-                robot.setActive(msg.contains(ACTIVE));
+                robot.action.setEnabled(msg.contains(ACTIVE));
             }
         } catch(Exception ex) {
             log.printf("disconnected (%s)", ex);
         } finally {
-            robot.setActive(false);
+            robot.action.setEnabled(false);
             robot.client = null;
             try {
                 out.close();
