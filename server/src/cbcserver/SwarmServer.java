@@ -46,11 +46,11 @@ public class SwarmServer extends Interruptible {
         ServerSocket ssock = null;
         try {
             ssock = new ServerSocket(port);
-            log.println("now waiting for connections");
+            log.printf("now waiting for connections");
             
             while(isRunning()) {
                 try {
-                    log.println("waiting for connection...");
+                    log.printf("waiting for connection...");
                     Socket sock = ssock.accept();
                     String addr = sock.getInetAddress().getHostAddress();
                     log.printf("accepting %s", addr);
@@ -68,7 +68,7 @@ public class SwarmServer extends Interruptible {
                     log.trace(ex);
                 }
             }
-            log.println("exiting!");
+            log.printf("exiting!");
         } catch(InterruptedIOException ex) {
             log.printf("interrupted: %s", ex);
         } catch(IOException ex) {
