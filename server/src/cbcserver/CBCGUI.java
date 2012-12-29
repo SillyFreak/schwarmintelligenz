@@ -141,7 +141,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             //if no leader is selected, do nothing
             if(selectedRobot == null) return;
             
-            log.println("reorder robots");
+            log.printf("reorder robots");
             log.printf("  selected: %s", selectedRobot);
             
             int size = robots.size(), first = selectedRobot.ordinal();
@@ -170,7 +170,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             }
             sb.append("</html>");
             if(lastRobot != null) label.setText(sb.toString());
-            else log.println("...no robot is active");
+            else log.printf("...no robot is active");
         } catch(IOException ex) {
             log.trace(ex);
         }
@@ -222,7 +222,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             while(isRunning()) {
                 try {
                     wait(60 * 1000);
-                    log.println("Status update...");
+                    log.printf("Status update...");
                     sendAll(STATUS);
                 } catch(InterruptedException ex) {
                     log.trace(ex);

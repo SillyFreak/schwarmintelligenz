@@ -28,10 +28,6 @@ public class Logger {
         this.header = header.toString().replaceAll("%", "%%");
     }
     
-    public void println(Object x) {
-        System.out.println(header + x);
-    }
-    
     public void printf(String format, Object... args) {
         System.out.printf(header + format + "%n", args);
     }
