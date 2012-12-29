@@ -43,9 +43,10 @@ public class RobotHandle extends Interruptible implements Commands {
     @Override
     protected void execute() {
         try {
-            for(String msg; (msg = in.readLine()) != null;) {
-                log.printf("received '%s'", msg);
-                robot.action.setEnabled(msg.contains(ACTIVE));
+            for(int i; (i = in.read()) != -1;) {
+                char c = (char) i;
+                log.printf("received '%s'", c);
+                robot.action.setEnabled(c == ACTIVE);
             }
         } catch(Exception ex) {
             log.printf("disconnected (%s)", ex);
@@ -69,7 +70,7 @@ public class RobotHandle extends Interruptible implements Commands {
      * Sends a string message to the robot
      * </p>
      */
-    public void send(String message) throws IOException {
+    public void send(char message) throws IOException {
         log.printf("sending '%s'", message);
         out.write(message);
         out.flush();
