@@ -2,6 +2,8 @@
 package cbcserver;
 
 
+import static cbcserver.Logger.*;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
@@ -22,7 +24,7 @@ import java.util.concurrent.ExecutorService;
  * @author Clemens Koza
  */
 public class SwarmServer extends Interruptible {
-    private static final Logger log = new Logger("Server");
+    private static final Logger log = new Logger("Server", INFO);
     
     private final int           port;
     
@@ -32,13 +34,13 @@ public class SwarmServer extends Interruptible {
         
         for(Enumeration<NetworkInterface> ni = NetworkInterface.getNetworkInterfaces(); ni.hasMoreElements();) {
             NetworkInterface iface = ni.nextElement();
-            log.printf("network interface: %s", iface.getDisplayName());
+            log.printf(TRACE, "network interface: %s", iface.getDisplayName());
             for(Enumeration<InetAddress> ia = iface.getInetAddresses(); ia.hasMoreElements();) {
                 InetAddress address = ia.nextElement();
-                log.printf("  IP: %s", address.getHostAddress());
+                log.printf(TRACE, "  IP: %s", address.getHostAddress());
             }
         }
-        log.printf("socket on port %d", port);
+        log.printf(INFO, "socket on port %d", port);
     }
     
     @Override
@@ -46,38 +48,38 @@ public class SwarmServer extends Interruptible {
         ServerSocket ssock = null;
         try {
             ssock = new ServerSocket(port);
-            log.printf("now waiting for connections");
+            log.printf(TRACE, "now waiting for connections");
             
             while(isRunning()) {
                 try {
-                    log.printf("waiting for connection...");
+                    log.printf(TRACE, "waiting for connection...");
                     Socket sock = ssock.accept();
                     String addr = sock.getInetAddress().getHostAddress();
-                    log.printf("accepting %s", addr);
+                    log.printf(TRACE, "accepting %s", addr);
                     
                     Robot robot = Robot.getByAddress(addr);
                     if(robot == null) {
-                        log.printf("unknown address %s", addr);
+                        log.printf(TRACE, "unknown address %s", addr);
                     } else {
-                        log.printf("%s connected", robot);
+                        log.printf(INFO, "%s connected", robot);
                         (robot.client = new RobotHandle(pool, sock, robot)).start();
                     }
                 } catch(InterruptedIOException ex) {
-                    log.printf("interrupted: %s", ex);
+                    log.printf(DEBUG, "interrupted: %s", ex);
                 } catch(IOException ex) {
-                    log.trace(ex);
+                    log.trace(WARNING, ex);
                 }
             }
-            log.printf("exiting!");
+            log.printf(INFO, "exiting!");
         } catch(InterruptedIOException ex) {
-            log.printf("interrupted: %s", ex);
+            log.printf(DEBUG, "interrupted: %s", ex);
         } catch(IOException ex) {
-            log.trace(ex);
+            log.trace(WARNING, ex);
         } finally {
             try {
                 ssock.close();
             } catch(IOException ex) {
-                log.trace(ex);
+                log.trace(WARNING, ex);
             }
         }
     }

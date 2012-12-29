@@ -2,6 +2,7 @@
 package cbcserver;
 
 
+import static cbcserver.Logger.*;
 import static cbcserver.Robot.*;
 
 import java.awt.BorderLayout;
@@ -41,7 +42,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
     
     public static final int       PORT             = 28109;
     
-    private static final Logger   log              = new Logger("CBCGUI");
+    private static final Logger   log              = new Logger("CBCGUI", DEBUG);
     private static boolean        debug            = false;
     
     private final JLabel          label;
@@ -111,7 +112,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
      */
     @Override
     public void change(Robot robot) {
-        log.printf("%s %s", robot.name(), robot.action.isEnabled()? "active":"inactive");
+        log.printf(DEBUG, "%s %s", robot.name(), robot.action.isEnabled()? "active":"inactive");
         orderRobots();
     }
     
@@ -141,8 +142,8 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             //if no leader is selected, do nothing
             if(selectedRobot == null) return;
             
-            log.printf("reorder robots");
-            log.printf("  selected: %s", selectedRobot);
+            log.printf(INFO, "reorder robots");
+            log.printf(TRACE, "  selected: %s", selectedRobot);
             
             int size = robots.size(), first = selectedRobot.ordinal();
             StringBuilder sb = new StringBuilder("<html>");
@@ -150,19 +151,19 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             for(int i = first; i < first + size; i++) {
                 Robot robot = robots.get(i % size);
                 if(!robot.action.isEnabled()) {
-                    log.printf("  %s inactive", robot);
+                    log.printf(TRACE, "  %s inactive", robot);
                     continue;
                 }
                 
                 if(lastRobot == null) {
                     //the first robot in the chain
                     robot.send(RANDOM);
-                    log.printf("  leader: %s", robot);
+                    log.printf(TRACE, "  leader: %s", robot);
                 } else {
                     //a follower
                     sb.append(" &larr; ");
                     robot.send(lastRobot.follow);
-                    log.printf("  next:   %s", robot);
+                    log.printf(TRACE, "  next:   %s", robot);
                 }
                 //append HTML, set leader for the next robot
                 sb.append(robot.getHTMLNamePlain());
@@ -170,9 +171,9 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             }
             sb.append("</html>");
             if(lastRobot != null) label.setText(sb.toString());
-            else log.printf("...no robot is active");
+            else log.printf(INFO, "...no robot is active");
         } catch(IOException ex) {
-            log.trace(ex);
+            log.trace(ERROR, ex);
         }
     }
     
@@ -222,12 +223,12 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             while(isRunning()) {
                 try {
                     wait(60 * 1000);
-                    log.printf("Status update...");
+                    log.printf(INFO, "Status update...");
                     sendAll(STATUS);
                 } catch(InterruptedException ex) {
-                    log.trace(ex);
+                    log.trace(WARNING, ex);
                 } catch(IOException ex) {
-                    log.trace(ex);
+                    log.trace(ERROR, ex);
                 }
             }
         }
