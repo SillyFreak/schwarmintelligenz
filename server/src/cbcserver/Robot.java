@@ -22,14 +22,14 @@ import cbcserver.actions.LeaderAction;
  * Enum for the swarm's Robots.
  * </p>
  * 
- * @version V1.0 06.12.2012
+ * @version V1.1 06.12.2012
  * @author SillyFreak
  */
 public enum Robot {
-    RED("ROT", "fo00", "192.168.1.11"),
-    YELLOW("GELB", "fo01", "192.168.1.12"),
-    GREEN("GR&Uuml;N", "fo02", "192.168.1.13"),
-    BLUE("BLAU", "fo03", "192.168.1.14");
+    RED("ROT", "192.168.1.11"),
+    YELLOW("GELB", "192.168.1.12"),
+    ORANGE("ORANGE", "192.168.1.13"),
+    MAGENTA("LILA", "192.168.1.14");
     
     public static final List<Robot>   robots = unmodifiableList(asList(Robot.values()));
     private static Map<String, Robot> byAddress;
@@ -70,16 +70,16 @@ public enum Robot {
     public final Color     color;
     private final int      ccode;
     public final String    displayName;
-    public final String    follow;
+    public final char      follow;
     public LeaderAction    action;
     
     public RobotHandle     client;
     
-    private Robot(String displayName, String follow, String ip) {
+    private Robot(String displayName, String ip) {
         this.color = getColor(name());
         this.ccode = color.getRGB() & 0x00FFFFFF;
         this.displayName = displayName;
-        this.follow = follow;
+        this.follow = (char) ('0' + ordinal());
         this.ip = ip;
         
         receive = new JCheckBox("<html>" + displayName + "</html>", true);
@@ -94,7 +94,7 @@ public enum Robot {
      * Sends a message if the robot is connected and has an associated {@link RobotHandle}.
      * </p>
      */
-    public void send(String m) throws IOException {
+    public void send(char m) throws IOException {
         if(receive.isSelected() && client != null) client.send(m);
     }
     
@@ -103,7 +103,7 @@ public enum Robot {
      * Sends a message to every robot that is connected and has an associated {@link RobotHandle}.
      * </p>
      */
-    public static void sendAll(String m) throws IOException {
+    public static void sendAll(char m) throws IOException {
         for(Robot r:robots)
             r.send(m);
     }
