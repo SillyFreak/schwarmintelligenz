@@ -149,7 +149,10 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             Robot lastRobot = null;
             for(int i = first; i < first + size; i++) {
                 Robot robot = robots.get(i % size);
-                if(!robot.action.isEnabled()) continue;
+                if(!robot.action.isEnabled()) {
+                    log.printf("  %s inactive", robot);
+                    continue;
+                }
                 
                 if(lastRobot == null) {
                     //the first robot in the chain
