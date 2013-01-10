@@ -79,7 +79,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
         }
         
         { //status label
-            label = new JLabel("<html>W&auml;hle den Anf&uuml;hrer</html>");
+            label = new JLabel();
             label.setHorizontalAlignment(JLabel.CENTER);
             label.setFont(label.getFont().deriveFont(30f));
             p.add(label, BorderLayout.SOUTH);
@@ -90,6 +90,8 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             (new SwarmServer(pool, PORT)).start();
             (bots = new BotStatus(pool)).start();
         }
+        
+        orderRobots();
     }
     
     private void makeJToolBar() {
@@ -139,39 +141,70 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
      */
     public void orderRobots() {
         try {
-            //if no leader is selected, do nothing
-            if(selectedRobot == null) return;
+            log.printf(INFO, "reorder robots...");
             
-            log.printf(INFO, "reorder robots");
-            log.printf(TRACE, "  selected: %s", selectedRobot);
-            
-            int size = robots.size(), first = selectedRobot.ordinal();
-            StringBuilder sb = new StringBuilder("<html>");
-            Robot lastRobot = null;
+            int size = robots.size(), first = selectedRobot == null? 0:selectedRobot.ordinal();
+            Robot active = null;
             for(int i = first; i < first + size; i++) {
-                Robot robot = robots.get(i % size);
-                if(!robot.action.isEnabled()) {
-                    log.printf(TRACE, "  %s inactive", robot);
-                    continue;
+                Robot r = robots.get(i % size);
+                if(r.action.isEnabled() && active == null) {
+                    active = r;
+                    break;
                 }
-                
-                if(lastRobot == null) {
-                    //the first robot in the chain
-                    robot.send(RANDOM);
-                    log.printf(TRACE, "  leader: %s", robot);
-                } else {
-                    //a follower
-                    sb.append(" &larr; ");
-                    robot.send(lastRobot.follow);
-                    log.printf(TRACE, "  next:   %s", robot);
-                }
-                //append HTML, set leader for the next robot
-                sb.append(robot.getHTMLNamePlain());
-                lastRobot = robot;
             }
-            sb.append("</html>");
-            if(lastRobot != null) label.setText(sb.toString());
-            else log.printf(INFO, "...no robot is active");
+            
+            if(active == null) {
+                //nothing active; clear the selected state
+                if(selectedRobot != null) {
+                    selectedRobot.action.setSelected(false);
+                    selectedRobot = null;
+                }
+                label.setText("<html>Kein Roboter Aktiv...</html>");
+                log.printf(INFO, "...no robot is active");
+                
+            } else if(selectedRobot == null) {
+                //active, but nothing selected
+                label.setText("<html>W&auml;hle einen Anführer!</html>");
+                log.printf(INFO, "...no robot selected");
+                
+            } else {
+                //active, and selection. reorder robots
+                
+                selectedRobot.action.setSelected(false);
+                selectedRobot = active;
+                selectedRobot.action.setSelected(true);
+                
+                log.printf(INFO, "...selected: %s", selectedRobot);
+                
+                StringBuilder sb = new StringBuilder("<html>");
+                Robot lastRobot = null;
+                for(int i = first; i < first + size; i++) {
+                    Robot robot = robots.get(i % size);
+                    if(!robot.action.isEnabled()) {
+                        log.printf(TRACE, "  %s inactive", robot);
+                        continue;
+                    }
+                    
+                    if(lastRobot == null) {
+                        //the first robot in the chain
+                        robot.send(RANDOM);
+                        log.printf(TRACE, "  leader: %s", robot);
+                    } else {
+                        //a follower
+                        sb.append(" &larr; ");
+                        robot.send(lastRobot.follow);
+                        log.printf(TRACE, "  next:   %s", robot);
+                    }
+                    //append HTML, set leader for the next robot
+                    sb.append(robot.getHTMLNamePlain());
+                    lastRobot = robot;
+                }
+                sb.append("</html>");
+                label.setText(sb.toString());
+//            } else {
+//                //active, and selection, but no change
+//                log.printf(INFO, "...same leader");
+            }
         } catch(IOException ex) {
             log.trace(ERROR, ex);
         }

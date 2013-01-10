@@ -57,6 +57,14 @@ public class LeaderAction extends CBCGUIAction {
         fireChanged();
     }
     
+    public void setSelected(boolean newValue) {
+        putValue(Action.SELECTED_KEY, newValue);
+    }
+    
+    public boolean isSelected() {
+        return (Boolean) getValue(Action.SELECTED_KEY);
+    }
+    
     private void fireChanged() {
         Robot r = getRobot();
         
