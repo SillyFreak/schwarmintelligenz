@@ -4,7 +4,6 @@ package cbcserver;
 
 import static cbcserver.Logger.*;
 import static cbcserver.Robot.*;
-import static javax.swing.JOptionPane.*;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -21,7 +20,6 @@ import javax.swing.ButtonGroup;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
@@ -34,6 +32,7 @@ import org.jdesktop.swingx.JXLabel;
 import org.jdesktop.swingx.JXPanel;
 import org.jdesktop.swingx.JXRootPane;
 
+import cbcserver.actions.HelpAction;
 import cbcserver.actions.LeaderAction;
 import cbcserver.actions.StatusAction;
 
@@ -102,9 +101,16 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             label.setHorizontalAlignment(JXLabel.CENTER);
             label.setFont(label.getFont().deriveFont(30f));
             
+            HelpAction a = new HelpAction(this);
+            JToggleButton b = new JToggleButton(a);
+            a.installIcons(b);
+            b.setContentAreaFilled(false);
+            b.setBorder(null);
+            b.setFocusPainted(false);
+            
             JXPanel status = new JXPanel(new BorderLayout());
             status.add(label);
-            status.add(new JToggleButton());
+            status.add(b, BorderLayout.EAST);
             
             p.add(status, BorderLayout.SOUTH);
         }
@@ -116,6 +122,10 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         }
         
         orderRobots();
+    }
+    
+    public void setHelpVisible(boolean visible) {
+        help.setCollapsed(!visible);
     }
     
     private void makeJToolBar() {
@@ -249,8 +259,6 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
      */
     public static void main(String... args) throws IOException {
         if(args.length == 1) debug = "debug".equals(args[0]);
-        
-        JOptionPane.showMessageDialog(null, "", "", INFORMATION_MESSAGE);
         
         CBCGUI gui = new CBCGUI();
         
