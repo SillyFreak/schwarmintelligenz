@@ -4,9 +4,11 @@ package cbcserver;
 
 import static cbcserver.Logger.*;
 import static cbcserver.Robot.*;
+import static javax.swing.JOptionPane.*;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
@@ -16,13 +18,21 @@ import java.util.concurrent.Executors;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
+import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JRootPane;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingConstants;
+
+import org.jdesktop.swingx.JXCollapsiblePane;
+import org.jdesktop.swingx.JXCollapsiblePane.Direction;
+import org.jdesktop.swingx.JXFrame;
+import org.jdesktop.swingx.JXLabel;
+import org.jdesktop.swingx.JXPanel;
+import org.jdesktop.swingx.JXRootPane;
 
 import cbcserver.actions.LeaderAction;
 import cbcserver.actions.StatusAction;
@@ -37,23 +47,24 @@ import cbcserver.actions.StatusAction;
  * @version V1.0 06.12.2012
  * @author SillyFreak
  */
-public final class CBCGUI extends JRootPane implements Commands, ChangedListener {
-    private static final long     serialVersionUID = -2620534937798975690L;
+public final class CBCGUI extends JXRootPane implements Commands, ChangedListener {
+    private static final long       serialVersionUID = -2620534937798975690L;
     
-    public static final int       PORT             = 28109;
+    public static final int         PORT             = 28109;
     
-    private static final Logger   log              = new Logger("CBCGUI", DEBUG);
-    private static boolean        debug            = false;
+    private static final Logger     log              = new Logger("CBCGUI", DEBUG);
+    private static boolean          debug            = false;
     
-    private final JLabel          label;
+    private final JLabel            label;
+    private final JXCollapsiblePane help;
     
-    private final ExecutorService pool;
-    private final BotStatus       bots;
+    private final ExecutorService   pool;
+    private final BotStatus         bots;
     
-    private Robot                 selectedRobot;
+    private Robot                   selectedRobot;
     
     public CBCGUI() throws IOException {
-        JPanel p = new JPanel(new BorderLayout(10, 10));
+        JXPanel p = new JXPanel(new BorderLayout(10, 10));
         p.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         getContentPane().add(p);
         
@@ -61,7 +72,7 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
         if(debug) makeJToolBar();
         
         { //center panel
-            JPanel center = new JPanel(new GridLayout(1, 0, 3, 3));
+            JXPanel buttons = new JXPanel(new GridLayout(1, 0, 3, 3));
             ButtonGroup g = new ButtonGroup();
             for(int i = 0; i < robots.size(); i++) {
                 Robot r = robots.get(i);
@@ -71,18 +82,31 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
                 b.setFocusPainted(false);
                 b.setFont(b.getFont().deriveFont(30f));
                 g.add(b);
-                center.add(b);
+                buttons.add(b);
                 
                 r.action.addChangedListener(this);
             }
-            p.add(center, BorderLayout.CENTER);
+            
+            help = new JXCollapsiblePane(Direction.DOWN);
+            help.add(makeHelpPane());
+            help.setCollapsed(true);
+            
+            JXPanel center = new JXPanel(new BorderLayout());
+            center.add(buttons, BorderLayout.CENTER);
+            center.add(help, BorderLayout.SOUTH);
+            p.add(center);
         }
         
         { //status label
-            label = new JLabel();
-            label.setHorizontalAlignment(JLabel.CENTER);
+            label = new JXLabel();
+            label.setHorizontalAlignment(JXLabel.CENTER);
             label.setFont(label.getFont().deriveFont(30f));
-            p.add(label, BorderLayout.SOUTH);
+            
+            JXPanel status = new JXPanel(new BorderLayout());
+            status.add(label);
+            status.add(new JToggleButton());
+            
+            p.add(status, BorderLayout.SOUTH);
         }
         
         { //start server and status update thread
@@ -103,6 +127,16 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
         bar.add(new StatusAction(this));
         
         getContentPane().add(bar, BorderLayout.WEST);
+    }
+    
+    private JComponent makeHelpPane() {
+        JXPanel help = new JXPanel();
+        help.add(new JXLabel("help!"));
+        
+        JScrollPane sp = new JScrollPane(help);
+        sp.setPreferredSize(new Dimension(0, 300));
+        sp.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        return sp;
     }
     
     /**
@@ -216,16 +250,18 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
     public static void main(String... args) throws IOException {
         if(args.length == 1) debug = "debug".equals(args[0]);
         
+        JOptionPane.showMessageDialog(null, "", "", INFORMATION_MESSAGE);
+        
         CBCGUI gui = new CBCGUI();
         
-        JFrame frame = new JFrame("CBC Manager");
+        JXFrame frame = new JXFrame("CBC Manager");
         frame.setDefaultCloseOperation(debug? JFrame.EXIT_ON_CLOSE:JFrame.DO_NOTHING_ON_CLOSE);
-        frame.add(gui);
+        frame.setRootPane(gui);
         frame.setSize(1000, 400);
         frame.setLocationRelativeTo(null);
         
         
-        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        frame.setExtendedState(JXFrame.MAXIMIZED_BOTH);
         if(!debug) {
             frame.setUndecorated(true);
             frame.setAlwaysOnTop(true);
@@ -238,6 +274,20 @@ public final class CBCGUI extends JRootPane implements Commands, ChangedListener
             }
         }
         frame.setVisible(true);
+        
+        //TODO busy pane
+//        JXBusyLabel l = new JXBusyLabel(new Dimension(50, 50));
+//        l.setAlignmentX(CENTER_ALIGNMENT);
+//        l.setBusy(true);
+//        
+//        JXPanel p = new JXPanel(null);
+//        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+//        p.add(Box.createVerticalGlue());
+//        p.add(l);
+//        p.add(Box.createVerticalGlue());
+//        
+//        frame.setWaitPane(p);
+//        frame.setWaitPaneVisible(true);
     }
     
     /**

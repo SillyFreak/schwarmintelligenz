@@ -53,7 +53,8 @@ public class LeaderAction extends CBCGUIAction {
     @Override
     public void setEnabled(boolean newValue) {
         super.setEnabled(newValue);
-        putValue(Action.NAME, newValue? "":"<html>" + getRobot().displayName + "</html>");
+        putValue(Action.NAME, newValue? "":"<html><p style='text-align: center'>" + getRobot().displayName
+                + "<br/>Beim Aufladen</p></html>");
         fireChanged();
     }
     
