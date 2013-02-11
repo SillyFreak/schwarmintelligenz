@@ -66,7 +66,7 @@ public class HelpAction extends CBCGUIAction {
             g = image.createGraphics();
             while(!g.drawImage(darker, 2, 2, null))
                 try {
-                    //sleep a milli to be sure the image was loaded. dirty, but works...
+                    //sleep a micro to be sure the image was loaded. dirty, but works...
                     Thread.sleep(0, 1000);
                 } catch(InterruptedException ex) {}
             g.dispose();

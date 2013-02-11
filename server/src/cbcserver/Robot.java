@@ -14,6 +14,7 @@ import java.util.Map;
 
 import javax.swing.JCheckBox;
 
+import cbcserver.L10n.Localizable;
 import cbcserver.actions.LeaderAction;
 
 
@@ -25,11 +26,8 @@ import cbcserver.actions.LeaderAction;
  * @version V1.1 06.12.2012
  * @author SillyFreak
  */
-public enum Robot {
-    RED("ROT", "192.168.1.11"),
-    YELLOW("GELB", "192.168.1.12"),
-    ORANGE("ORANGE", "192.168.1.13"),
-    MAGENTA("LILA", "192.168.1.14");
+public enum Robot implements Localizable {
+    RED("192.168.1.11"), YELLOW("192.168.1.12"), ORANGE("192.168.1.13"), MAGENTA("192.168.1.14");
     
     public static final List<Robot>   robots = unmodifiableList(asList(Robot.values()));
     private static Map<String, Robot> byAddress;
@@ -69,20 +67,26 @@ public enum Robot {
     public final JCheckBox receive;
     public final Color     color;
     private final int      ccode;
-    public final String    displayName;
+    public String          displayName;
     public final char      follow;
     public LeaderAction    action;
     
     public RobotHandle     client;
     
-    private Robot(String displayName, String ip) {
+    private Robot(String ip) {
         this.color = getColor(name());
         this.ccode = color.getRGB() & 0x00FFFFFF;
-        this.displayName = displayName;
         this.follow = (char) ('0' + ordinal());
         this.ip = ip;
         
-        receive = new JCheckBox("<html>" + displayName + "</html>", true);
+        receive = new JCheckBox("", true);
+    }
+    
+    @Override
+    public void setL10n(L10n l10n) {
+        displayName = l10n.format("robot." + ordinal());
+        receive.setText("<html>" + displayName + "</html>");
+        action.setL10n(l10n);
     }
     
     public String getHTMLNamePlain() {

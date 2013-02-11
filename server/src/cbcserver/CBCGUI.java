@@ -12,6 +12,7 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
 import java.io.IOException;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -24,7 +25,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 
+import org.jdesktop.swingx.JXButton;
 import org.jdesktop.swingx.JXCollapsiblePane;
 import org.jdesktop.swingx.JXCollapsiblePane.Direction;
 import org.jdesktop.swingx.JXFrame;
@@ -32,7 +35,9 @@ import org.jdesktop.swingx.JXLabel;
 import org.jdesktop.swingx.JXPanel;
 import org.jdesktop.swingx.JXRootPane;
 
+import cbcserver.L10n.Localizable;
 import cbcserver.actions.HelpAction;
+import cbcserver.actions.LangAction;
 import cbcserver.actions.LeaderAction;
 import cbcserver.actions.StatusAction;
 
@@ -46,9 +51,10 @@ import cbcserver.actions.StatusAction;
  * @version V1.0 06.12.2012
  * @author SillyFreak
  */
-public final class CBCGUI extends JXRootPane implements Commands, ChangedListener {
+public final class CBCGUI extends JXRootPane implements Commands, ChangedListener, Localizable {
     private static final long       serialVersionUID = -2620534937798975690L;
     
+    private static final L10n[]     l10ns            = {new L10n(Locale.GERMAN), new L10n(Locale.ENGLISH)};
     public static final int         PORT             = 28109;
     
     private static final Logger     log              = new Logger("CBCGUI", DEBUG);
@@ -61,6 +67,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
     private final BotStatus         bots;
     
     private Robot                   selectedRobot;
+    private L10n                    l10n;
     
     public CBCGUI() throws IOException {
         JXPanel p = new JXPanel(new BorderLayout(10, 10));
@@ -87,7 +94,6 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             }
             
             help = new JXCollapsiblePane(Direction.DOWN);
-            help.add(makeHelpPane());
             help.setCollapsed(true);
             
             JXPanel center = new JXPanel(new BorderLayout());
@@ -101,16 +107,24 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             label.setHorizontalAlignment(JXLabel.CENTER);
             label.setFont(label.getFont().deriveFont(30f));
             
-            HelpAction a = new HelpAction(this);
-            JToggleButton b = new JToggleButton(a);
-            a.installIcons(b);
-            b.setContentAreaFilled(false);
-            b.setBorder(null);
-            b.setFocusPainted(false);
+            HelpAction aHelp = new HelpAction(this);
+            JToggleButton help = new JToggleButton(aHelp);
+            aHelp.installIcons(help);
+            help.setContentAreaFilled(false);
+            help.setBorder(null);
+            help.setFocusPainted(false);
+            
+            LangAction aLang = new LangAction(this);
+            JXButton lang = new JXButton(aLang);
+            lang.setFocusPainted(false);
+            
+            JXPanel buttons = new JXPanel(new GridLayout());
+            buttons.add(help);
+            buttons.add(lang);
             
             JXPanel status = new JXPanel(new BorderLayout());
             status.add(label);
-            status.add(b, BorderLayout.EAST);
+            status.add(buttons, BorderLayout.EAST);
             
             p.add(status, BorderLayout.SOUTH);
         }
@@ -121,6 +135,22 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             (bots = new BotStatus(pool)).start();
         }
         
+        setL10n(l10ns[0]);
+        orderRobots();
+    }
+    
+    public void toggleLang() {
+        setL10n(l10n == l10ns[0]? l10ns[1]:l10ns[0]);
+    }
+    
+    @Override
+    public void setL10n(L10n l10n) {
+        this.l10n = l10n;
+        help.getContentPane().removeAll();
+        help.getContentPane().add(makeHelpPane());
+        
+        for(Robot r:robots)
+            r.setL10n(l10n);
         orderRobots();
     }
     
@@ -140,8 +170,11 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
     }
     
     private JComponent makeHelpPane() {
-        JXPanel help = new JXPanel();
-        help.add(new JXLabel("help!"));
+        JXLabel l = new JXLabel(l10n.format("help"));
+        l.setFont(l.getFont().deriveFont(16f));
+        l.setVerticalAlignment(SwingUtilities.TOP);
+        JXPanel help = new JXPanel(new BorderLayout());
+        help.add(l);
         
         JScrollPane sp = new JScrollPane(help);
         sp.setPreferredSize(new Dimension(0, 300));
@@ -203,12 +236,12 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                     selectedRobot.action.setSelected(false);
                     selectedRobot = null;
                 }
-                label.setText("<html>Kein Roboter Aktiv...</html>");
+                label.setText(l10n.format("order.noActive"));
                 log.printf(INFO, "...no robot is active");
                 
             } else if(selectedRobot == null) {
                 //active, but nothing selected
-                label.setText("<html>W&auml;hle einen Anführer!</html>");
+                label.setText(l10n.format("order.choose"));
                 log.printf(INFO, "...no robot selected");
                 
             } else {

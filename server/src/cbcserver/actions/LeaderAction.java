@@ -20,8 +20,12 @@ import javax.swing.Icon;
 import javax.swing.JToggleButton;
 import javax.swing.event.EventListenerList;
 
+import org.jdesktop.swingx.painter.BusyPainter;
+
 import cbcserver.CBCGUI;
 import cbcserver.ChangedListener;
+import cbcserver.L10n;
+import cbcserver.L10n.Localizable;
 import cbcserver.Robot;
 
 
@@ -33,17 +37,25 @@ import cbcserver.Robot;
  * @version V0.0 13.12.2012
  * @author SillyFreak
  */
-public class LeaderAction extends CBCGUIAction {
+public class LeaderAction extends CBCGUIAction implements Localizable {
     private static final long       serialVersionUID = 4586228180396062210L;
     
     private final EventListenerList listeners        = new EventListenerList();
     
     private static final String     ROBOT_KEY        = "LeaderAction:RobotKey";
     
+    private String                  chargingText;
+    
     public LeaderAction(CBCGUI gui, Robot robot) {
         super(gui, "", new ToggleIcon(robot));
         putValue(ROBOT_KEY, robot);
         setEnabled(false);
+    }
+    
+    @Override
+    public void setL10n(L10n l10n) {
+        chargingText = l10n.format("button.charging", getRobot().displayName);
+        putValue(Action.NAME, isEnabled()? "":chargingText);
     }
     
     private Robot getRobot() {
@@ -53,8 +65,7 @@ public class LeaderAction extends CBCGUIAction {
     @Override
     public void setEnabled(boolean newValue) {
         super.setEnabled(newValue);
-        putValue(Action.NAME, newValue? "":"<html><p style='text-align: center'>" + getRobot().displayName
-                + "<br/>Beim Aufladen</p></html>");
+        putValue(Action.NAME, newValue? "":chargingText);
         fireChanged();
     }
     
@@ -100,6 +111,8 @@ public class LeaderAction extends CBCGUIAction {
     private static class ToggleIcon implements Icon {
         private static final float[] floats = {0, 1};
         private final Color[]        normal, selected, disabled;
+        
+        private final BusyPainter    p      = new BusyPainter();
         
         public ToggleIcon(Robot r) {
             Color color = r.color;
