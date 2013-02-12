@@ -8,19 +8,15 @@ package cbcserver.actions;
 
 
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.LinearGradientPaint;
 import java.awt.event.ActionEvent;
 
-import javax.swing.AbstractButton;
 import javax.swing.Action;
-import javax.swing.Icon;
-import javax.swing.JToggleButton;
 import javax.swing.event.EventListenerList;
 
-import org.jdesktop.swingx.painter.BusyPainter;
+import org.jdesktop.swingx.JXButton;
+import org.jdesktop.swingx.painter.Painter;
 
 import cbcserver.CBCGUI;
 import cbcserver.ChangedListener;
@@ -42,39 +38,63 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
     
     private final EventListenerList listeners        = new EventListenerList();
     
-    private static final String     ROBOT_KEY        = "LeaderAction:RobotKey";
+    public static final int         SELECTED         = 1, CHARGING = 2, BUSY = 4;
     
+    private final Robot             robot;
     private String                  chargingText;
+    private int                     state;
     
     public LeaderAction(CBCGUI gui, Robot robot) {
-        super(gui, "", new ToggleIcon(robot));
-        putValue(ROBOT_KEY, robot);
-        setEnabled(false);
+        super(gui, "", null);
+        this.robot = robot;
+//        setState(CHARGING);
     }
     
     @Override
     public void setL10n(L10n l10n) {
         chargingText = l10n.format("button.charging", getRobot().displayName);
-        putValue(Action.NAME, isEnabled()? "":chargingText);
+        putValue(Action.NAME, isCharging()? chargingText:"");
     }
     
-    private Robot getRobot() {
-        return (Robot) getValue(ROBOT_KEY);
+    public void install(JXButton b) {
+        b.setBackgroundPainter(new TogglePainter(getRobot()));
     }
     
-    @Override
-    public void setEnabled(boolean newValue) {
-        super.setEnabled(newValue);
-        putValue(Action.NAME, newValue? "":chargingText);
-        fireChanged();
+    public int getState() {
+        return state;
     }
     
-    public void setSelected(boolean newValue) {
-        putValue(Action.SELECTED_KEY, newValue);
+    public void setState(int state) {
+        int change = this.state ^ state;
+        
+        this.state = state;
+        setEnabled(!isCharging() && !isBusy());
+        putValue(Action.NAME, isCharging()? chargingText:"");
+        if((change & CHARGING) != 0) fireChanged();
+    }
+    
+    public void setSelected(boolean selected) {
+        setState(selected? (state | SELECTED):(state & ~SELECTED));
     }
     
     public boolean isSelected() {
-        return (Boolean) getValue(Action.SELECTED_KEY);
+        return (state & SELECTED) != 0;
+    }
+    
+    public boolean isCharging() {
+        return (state & CHARGING) != 0;
+    }
+    
+    public void setBusy(boolean busy) {
+        setState(busy? (state | BUSY):(state & ~BUSY));
+    }
+    
+    public boolean isBusy() {
+        return (state & BUSY) != 0;
+    }
+    
+    private Robot getRobot() {
+        return robot;
     }
     
     private void fireChanged() {
@@ -101,20 +121,17 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        if(!((AbstractButton) e.getSource()).isSelected()) return;
-        gui.setLeader(getRobot());
+        if(!isSelected()) {
+            setState(state ^ SELECTED);
+            gui.setLeader(getRobot());
+        }
     }
     
-    /**
-     * Icon that paints a color dependent on the enablead & selected state
-     */
-    private static class ToggleIcon implements Icon {
-        private static final float[] floats = {0, 1};
-        private final Color[]        normal, selected, disabled;
+    private class TogglePainter implements Painter<JXButton> {
+        private final float[] floats = {0, 1};
+        private final Color[] normal, selected, disabled;
         
-        private final BusyPainter    p      = new BusyPainter();
-        
-        public ToggleIcon(Robot r) {
+        public TogglePainter(Robot r) {
             Color color = r.color;
             Color darker = color.darker();
             Color ddarker = darker.darker();
@@ -125,24 +142,11 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         }
         
         @Override
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-            JToggleButton b = (JToggleButton) c;
-            Graphics2D g2d = (Graphics2D) g;
-            
-            Color[] colors = !b.isEnabled()? disabled:b.isSelected()? selected:normal;
+        public void paint(Graphics2D g, JXButton b, int width, int height) {
+            Color[] colors = isCharging()? disabled:isSelected()? selected:normal;
             int w = b.getWidth(), h = b.getHeight();
-            g2d.setPaint(new LinearGradientPaint(w * .4f, h * .05f, w * .6f, h * .95f, floats, colors));
-            g2d.fillRect(0, 0, w, h);
-        }
-        
-        @Override
-        public int getIconWidth() {
-            return 0;
-        }
-        
-        @Override
-        public int getIconHeight() {
-            return 0;
+            g.setPaint(new LinearGradientPaint(w * .4f, h * .05f, w * .6f, h * .95f, floats, colors));
+            g.fillRect(0, 0, w, h);
         }
     }
 }

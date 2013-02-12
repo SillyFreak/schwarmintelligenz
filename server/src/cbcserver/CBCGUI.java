@@ -17,7 +17,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.swing.BorderFactory;
-import javax.swing.ButtonGroup;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -65,6 +64,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
     
     private final ExecutorService   pool;
     private final BotStatus         bots;
+    private final Busy              busy;
     
     private Robot                   selectedRobot;
     private L10n                    l10n;
@@ -79,16 +79,23 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         
         { //center panel
             JXPanel buttons = new JXPanel(new GridLayout(1, 0, 3, 3));
-            ButtonGroup g = new ButtonGroup();
+//            ButtonGroup g = new ButtonGroup();
             for(int i = 0; i < robots.size(); i++) {
                 Robot r = robots.get(i);
                 
-                JToggleButton b = new JToggleButton(r.action = new LeaderAction(this, r));
+                JXButton b = new JXButton(r.action = new LeaderAction(this, r));
+                r.action.install(b);
                 b.setForeground(Color.GRAY);
                 b.setFocusPainted(false);
                 b.setFont(b.getFont().deriveFont(30f));
-                g.add(b);
                 buttons.add(b);
+                
+//                JToggleButton b = new JToggleButton(r.action = new LeaderAction(this, r));
+//                b.setForeground(Color.GRAY);
+//                b.setFocusPainted(false);
+//                b.setFont(b.getFont().deriveFont(30f));
+//                g.add(b);
+//                buttons.add(b);
                 
                 r.action.addChangedListener(this);
             }
@@ -133,6 +140,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             pool = Executors.newCachedThreadPool();
             (new SwarmServer(pool, PORT)).start();
             (bots = new BotStatus(pool)).start();
+            (busy = new Busy(pool)).start();
         }
         
         setL10n(l10ns[0]);
@@ -151,7 +159,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         
         for(Robot r:robots)
             r.setL10n(l10n);
-        orderRobots();
+        updateLabels();
     }
     
     public void setHelpVisible(boolean visible) {
@@ -191,7 +199,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
      */
     @Override
     public void change(Robot robot) {
-        log.printf(DEBUG, "%s %s", robot.name(), robot.action.isEnabled()? "active":"inactive");
+        log.printf(DEBUG, "%s %s", robot.name(), robot.action.isCharging()? "inactive":"active");
         orderRobots();
     }
     
@@ -201,12 +209,13 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
     
     /**
      * <p>
-     * If a toggle button was pressed, selects a robot to be the leader, and re-orders them. For the debug-button,
-     * the status update is invoked.
+     * Selects the robot to be the leader and deselects the other robots, the orders the robots.
      * </p>
      */
     public void setLeader(Robot r) {
         selectedRobot = r;
+        for(Robot other:robots)
+            if(r != other) other.action.setSelected(false);
         orderRobots();
     }
     
@@ -216,7 +225,10 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
      * follow their respective previous robots.
      * </p>
      */
-    public void orderRobots() {
+    private void orderRobots() {
+        for(StackTraceElement ste:Thread.currentThread().getStackTrace())
+            System.out.println(ste);
+        
         try {
             log.printf(INFO, "reorder robots...");
             
@@ -224,7 +236,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             Robot active = null;
             for(int i = first; i < first + size; i++) {
                 Robot r = robots.get(i % size);
-                if(r.action.isEnabled() && active == null) {
+                if(!r.action.isCharging()) {
                     active = r;
                     break;
                 }
@@ -247,6 +259,8 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             } else {
                 //active, and selection. reorder robots
                 
+                busy.invoke();
+                
                 selectedRobot.action.setSelected(false);
                 selectedRobot = active;
                 selectedRobot.action.setSelected(true);
@@ -257,7 +271,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                 Robot lastRobot = null;
                 for(int i = first; i < first + size; i++) {
                     Robot robot = robots.get(i % size);
-                    if(!robot.action.isEnabled()) {
+                    if(robot.action.isCharging()) {
                         log.printf(TRACE, "  %s inactive", robot);
                         continue;
                     }
@@ -278,12 +292,52 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                 }
                 sb.append("</html>");
                 label.setText(sb.toString());
-//            } else {
-//                //active, and selection, but no change
-//                log.printf(INFO, "...same leader");
             }
         } catch(IOException ex) {
             log.trace(ERROR, ex);
+        }
+    }
+    
+    private void updateLabels() {
+        int size = robots.size(), first = selectedRobot == null? 0:selectedRobot.ordinal();
+        Robot active = null;
+        for(int i = first; i < first + size; i++) {
+            Robot r = robots.get(i % size);
+            if(!r.action.isCharging()) {
+                active = r;
+                break;
+            }
+        }
+        
+        if(active == null) {
+            //nothing active; clear the selected state
+            label.setText(l10n.format("order.noActive"));
+            
+        } else if(selectedRobot == null) {
+            //active, but nothing selected
+            label.setText(l10n.format("order.choose"));
+            
+        } else {
+            //active, and selection. reorder robots
+            
+            StringBuilder sb = new StringBuilder("<html>");
+            Robot lastRobot = null;
+            for(int i = first; i < first + size; i++) {
+                Robot robot = robots.get(i % size);
+                if(robot.action.isCharging()) {
+                    continue;
+                }
+                
+                if(lastRobot != null) {
+                    //a follower
+                    sb.append(" &larr; ");
+                }
+                //append HTML, set leader for the next robot
+                sb.append(robot.getHTMLNamePlain());
+                lastRobot = robot;
+            }
+            sb.append("</html>");
+            label.setText(sb.toString());
         }
     }
     
@@ -358,6 +412,34 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         }
         
         public synchronized void invoke() {
+            notify();
+        }
+    }
+    
+    private class Busy extends Interruptible {
+        public Busy(ExecutorService pool) {
+            super(pool);
+        }
+        
+        @Override
+        protected synchronized void execute() {
+            while(isRunning()) {
+                try {
+                    wait();
+                    log.printf(INFO, "Robots are now busy...");
+                    Thread.sleep(3 * 1000);
+                    for(Robot r:robots)
+                        r.action.setBusy(false);
+                    log.printf(INFO, "Robots are now ready!");
+                } catch(InterruptedException ex) {
+                    log.trace(WARNING, ex);
+                }
+            }
+        }
+        
+        public synchronized void invoke() {
+            for(Robot r:robots)
+                r.action.setBusy(true);
             notify();
         }
     }
