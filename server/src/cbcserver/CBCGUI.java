@@ -226,9 +226,6 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
      * </p>
      */
     private void orderRobots() {
-        for(StackTraceElement ste:Thread.currentThread().getStackTrace())
-            System.out.println(ste);
-        
         try {
             log.printf(INFO, "reorder robots...");
             
