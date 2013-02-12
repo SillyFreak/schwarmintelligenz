@@ -22,8 +22,6 @@ import java.util.concurrent.ExecutorService;
  * @author SillyFreak
  */
 public class RobotHandle extends Interruptible implements Commands {
-    private final Logger     log;
-    
     protected Socket         sock;
     protected BufferedWriter out;
     protected BufferedReader in;
@@ -31,14 +29,13 @@ public class RobotHandle extends Interruptible implements Commands {
     
     public RobotHandle(ExecutorService pool, Socket sock, Robot robot) {
         super(pool);
-        log = new Logger(robot.toString(), DEBUG);
         this.sock = sock;
         this.robot = robot;
         try {
             out = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()));
             in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
         } catch(Exception ex) {
-            log.trace(ERROR, ex);
+            robot.log.trace(ERROR, ex);
         }
     }
     
@@ -47,13 +44,13 @@ public class RobotHandle extends Interruptible implements Commands {
         try {
             for(int i; (i = in.read()) != -1;) {
                 char c = (char) i;
-                log.printf(DEBUG, "received '%s'", c);
+                robot.log.printf(DEBUG, "received '%s'", c);
                 
                 if(c == ACTIVE) robot.action.setEnabled(true);
                 else if(c == INACTIVE) robot.action.setEnabled(false);
             }
         } catch(Exception ex) {
-            log.printf(WARNING, "disconnected (%s)", ex);
+            robot.log.printf(WARNING, "disconnected (%s)", ex);
         } finally {
             robot.action.setEnabled(false);
             robot.client = null;
@@ -75,7 +72,7 @@ public class RobotHandle extends Interruptible implements Commands {
      * </p>
      */
     public void send(char message) throws IOException {
-        log.printf(DEBUG, "sending '%s'", message);
+        robot.log.printf(DEBUG, "sending '%s'", message);
         out.write(message);
         out.flush();
     }

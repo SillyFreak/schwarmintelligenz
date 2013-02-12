@@ -2,6 +2,7 @@
 package cbcserver;
 
 
+import static cbcserver.Logger.*;
 import static java.lang.String.*;
 import static java.util.Arrays.*;
 import static java.util.Collections.*;
@@ -62,6 +63,7 @@ public enum Robot implements Localizable {
         }
     }
     
+    public final Logger    log = new Logger(name(), DEBUG);
     private final String   ip;
     
     public final JCheckBox receive;
