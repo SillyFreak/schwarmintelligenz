@@ -8,20 +8,28 @@ package cbcserver.actions;
 
 
 import java.awt.Color;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.LinearGradientPaint;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 
+import javax.swing.AbstractButton;
 import javax.swing.Action;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.EventListenerList;
+import javax.swing.plaf.basic.BasicHTML;
+import javax.swing.text.View;
 
 import org.jdesktop.swingx.JXButton;
 import org.jdesktop.swingx.painter.BusyPainter;
 import org.jdesktop.swingx.painter.Painter;
 
+import sun.swing.SwingUtilities2;
 import cbcserver.CBCGUI;
 import cbcserver.ChangedListener;
 import cbcserver.L10n;
@@ -152,7 +160,7 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
     
     private class TogglePainter implements Painter<JXButton> {
         private final float[] floats = {0, 1};
-        private final Color[] normal, selected, disabled;
+        private final Color[] normal, pressed, selected, disabled;
         
         public TogglePainter() {
             Color color = robot.color;
@@ -160,14 +168,17 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
             Color ddarker = darker.darker();
             
             normal = new Color[] {color, darker};
-            selected = new Color[] {ddarker, color};
+            pressed = new Color[] {color, ddarker};
+            selected = new Color[] {darker, color};
             disabled = new Color[] {Color.LIGHT_GRAY, Color.GRAY};
         }
         
         @Override
         public void paint(Graphics2D g, JXButton b, int width, int height) {
-            Color[] colors = isCharging()? disabled:isSelected()? selected:normal;
+            boolean isPressed = b.getModel().isArmed() && b.getModel().isPressed();
+            Color[] colors = isCharging()? disabled:isSelected()? selected:isPressed? pressed:normal;
             int w = b.getWidth(), h = b.getHeight();
+            
             g.setPaint(new LinearGradientPaint(w * .4f, h * .05f, w * .6f, h * .95f, floats, colors));
             g.fillRect(0, 0, w, h);
         }
@@ -177,6 +188,10 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         private final JXButton b;
         private Timer          busy;
         
+        private Rectangle      viewRect = new Rectangle();
+        private Rectangle      textRect = new Rectangle();
+        private Rectangle      iconRect = new Rectangle();
+        
         public ForegroundPainter(JXButton b) {
             this.b = b;
         }
@@ -184,10 +199,28 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         @Override
         public void paint(Graphics2D g, JXButton b, int width, int height) {
             if(isCharging()) {
-                //TODO paint text
+                layout(b, SwingUtilities2.getFontMetrics(b, g), b.getWidth(), b.getHeight());
+                View v = (View) b.getClientProperty(BasicHTML.propertyKey);
+                v.paint(g, textRect);
             } else if(isBusy()) {
                 bp.paint(g, b, width, height);
             }
+        }
+        
+        private String layout(AbstractButton b, FontMetrics fm, int width, int height) {
+            Insets i = b.getInsets();
+            viewRect.x = i.left;
+            viewRect.y = i.top;
+            viewRect.width = width - (i.right + viewRect.x);
+            viewRect.height = height - (i.bottom + viewRect.y);
+            
+            textRect.x = textRect.y = textRect.width = textRect.height = 0;
+            iconRect.x = iconRect.y = iconRect.width = iconRect.height = 0;
+            
+            // layout the text and icon
+            return SwingUtilities.layoutCompoundLabel(b, fm, b.getText(), null, b.getVerticalAlignment(),
+                    b.getHorizontalAlignment(), b.getVerticalTextPosition(), b.getHorizontalTextPosition(),
+                    viewRect, iconRect, textRect, b.getText() == null? 0:b.getIconTextGap());
         }
         
         public void setBusy(boolean busy) {
