@@ -69,7 +69,7 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
     public LeaderAction(CBCGUI gui, Robot robot) {
         super(gui, "", null);
         this.robot = robot;
-        if(robot == Robot.RED) setState(CHARGING);
+        setState(CHARGING);
     }
     
     @Override

@@ -424,7 +424,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                 try {
                     wait();
                     log.printf(INFO, "Robots are now busy...");
-                    Thread.sleep(3 * 1000);
+                    Thread.sleep((debug? 1:30) * 1000);
                     for(Robot r:robots)
                         r.action.setBusy(false);
                     log.printf(INFO, "Robots are now ready!");
