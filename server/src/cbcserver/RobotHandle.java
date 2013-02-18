@@ -46,8 +46,8 @@ public class RobotHandle extends Interruptible implements Commands {
                 char c = (char) i;
                 robot.log.printf(DEBUG, "received '%s'", c);
                 
-                if(c == ACTIVE) robot.action.setEnabled(true);
-                else if(c == INACTIVE) robot.action.setEnabled(false);
+                if(c == ACTIVE) robot.action.setCharging(false);
+                else if(c == INACTIVE) robot.action.setCharging(true);
             }
         } catch(Exception ex) {
             robot.log.printf(WARNING, "disconnected (%s)", ex);

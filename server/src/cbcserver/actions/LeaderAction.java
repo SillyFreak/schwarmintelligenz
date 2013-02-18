@@ -112,6 +112,10 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         return (state & SELECTED) != 0;
     }
     
+    public void setCharging(boolean charging) {
+        setState(charging? (state | CHARGING):(state & ~CHARGING));
+    }
+    
     public boolean isCharging() {
         return (state & CHARGING) != 0;
     }
