@@ -366,20 +366,6 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             }
         }
         frame.setVisible(true);
-        
-        //TODO busy pane
-//        JXBusyLabel l = new JXBusyLabel(new Dimension(50, 50));
-//        l.setAlignmentX(CENTER_ALIGNMENT);
-//        l.setBusy(true);
-//        
-//        JXPanel p = new JXPanel(null);
-//        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-//        p.add(Box.createVerticalGlue());
-//        p.add(l);
-//        p.add(Box.createVerticalGlue());
-//        
-//        frame.setWaitPane(p);
-//        frame.setWaitPaneVisible(true);
     }
     
     /**

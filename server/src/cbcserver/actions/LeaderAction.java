@@ -7,6 +7,8 @@
 package cbcserver.actions;
 
 
+import static cbcserver.Logger.*;
+
 import java.awt.Color;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -65,6 +67,7 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
     private ForegroundPainter        fp;
     private final Robot              robot;
     private int                      state;
+    private long                     lastPing;
     
     public LeaderAction(CBCGUI gui, Robot robot) {
         super(gui, "", null);
@@ -99,7 +102,13 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         
         this.state = state;
         setEnabled(!isCharging() && !isBusy());
-        if((change & CHARGING) != 0) fireChanged();
+        if((change & CHARGING) != 0) {
+            if((state & CHARGING) == 0) {
+                robot.log.printf(DEBUG, "...ping update");
+                lastPing = System.currentTimeMillis();
+            }
+            fireChanged();
+        }
         
         if(fp != null) fp.setBusy((state & BUSY) != 0);
     }
@@ -110,6 +119,13 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
     
     public boolean isSelected() {
         return (state & SELECTED) != 0;
+    }
+    
+    public void checkTimeout() {
+        if(System.currentTimeMillis() - lastPing > 500 && !isCharging()) {
+            robot.log.printf(DEBUG, "...ping timeout");
+            setState(state ^ CHARGING);
+        }
     }
     
     public void setCharging(boolean charging) {

@@ -44,7 +44,7 @@ public class RobotHandle extends Interruptible implements Commands {
         try {
             for(int i; (i = in.read()) != -1;) {
                 char c = (char) i;
-                robot.log.printf(DEBUG, "received '%s'", c);
+                robot.log.printf(TRACE, "received '%s'", c);
                 
                 if(c == ACTIVE) robot.action.setCharging(false);
                 else if(c == INACTIVE) robot.action.setCharging(true);
@@ -72,7 +72,7 @@ public class RobotHandle extends Interruptible implements Commands {
      * </p>
      */
     public void send(char message) throws IOException {
-        robot.log.printf(DEBUG, "sending '%s'", message);
+        robot.log.printf(TRACE, "sending '%s'", message);
         out.write(message);
         out.flush();
     }
