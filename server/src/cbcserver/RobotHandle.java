@@ -52,7 +52,7 @@ public class RobotHandle extends Interruptible implements Commands {
         } catch(Exception ex) {
             robot.log.printf(WARNING, "disconnected (%s)", ex);
         } finally {
-            robot.action.setEnabled(false);
+            robot.action.setCharging(true);
             robot.client = null;
             try {
                 out.close();

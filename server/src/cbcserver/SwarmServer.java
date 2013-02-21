@@ -54,15 +54,27 @@ public class SwarmServer extends Interruptible {
                 try {
                     log.printf(TRACE, "waiting for connection...");
                     Socket sock = ssock.accept();
-                    String addr = sock.getInetAddress().getHostAddress();
-                    log.printf(TRACE, "accepting %s", addr);
                     
-                    Robot robot = Robot.getByAddress(addr);
-                    if(robot == null) {
-                        log.printf(TRACE, "unknown address %s", addr);
+                    if(sock.getInetAddress().isLoopbackAddress()) {
+                        int index = sock.getPort() - (CBCGUI.PORT + 1);
+                        if(index < 0 || index >= Robot.robots.size()) {
+                            log.printf(TRACE, "unknown dummy %s", index);
+                        } else {
+                            Robot robot = Robot.robots.get(index);
+                            log.printf(INFO, "dummy connected: %s", robot);
+                            (robot.client = new RobotHandle(pool, sock, robot)).start();
+                        }
                     } else {
-                        log.printf(INFO, "%s connected", robot);
-                        (robot.client = new RobotHandle(pool, sock, robot)).start();
+                        String addr = sock.getInetAddress().getHostAddress();
+                        log.printf(TRACE, "accepting %s", addr);
+                        
+                        Robot robot = Robot.getByAddress(addr);
+                        if(robot == null) {
+                            log.printf(TRACE, "unknown address %s", addr);
+                        } else {
+                            log.printf(INFO, "robot connected: %s", robot);
+                            (robot.client = new RobotHandle(pool, sock, robot)).start();
+                        }
                     }
                 } catch(InterruptedIOException ex) {
                     log.printf(DEBUG, "interrupted: %s", ex);
