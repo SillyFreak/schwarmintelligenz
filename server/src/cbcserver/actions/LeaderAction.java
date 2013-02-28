@@ -103,10 +103,6 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         this.state = state;
         setEnabled(!isCharging() && !isBusy());
         if((change & CHARGING) != 0) {
-            if((state & CHARGING) == 0) {
-                robot.log.printf(DEBUG, "...ping update");
-                lastPing = System.currentTimeMillis();
-            }
             fireChanged();
         }
         
@@ -122,13 +118,17 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
     }
     
     public void checkTimeout() {
-        if(System.currentTimeMillis() - lastPing > 500 && !isCharging()) {
+        if(System.currentTimeMillis() - lastPing > 1500 && !isCharging()) {
             robot.log.printf(DEBUG, "...ping timeout");
             setState(state ^ CHARGING);
         }
     }
     
     public void setCharging(boolean charging) {
+        if(!charging) {
+            robot.log.printf(DEBUG, "...ping update");
+            lastPing = System.currentTimeMillis();
+        }
         setState(charging? (state | CHARGING):(state & ~CHARGING));
     }
     

@@ -79,7 +79,6 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         
         { //center panel
             JXPanel buttons = new JXPanel(new GridLayout(1, 0, 3, 3));
-//            ButtonGroup g = new ButtonGroup();
             for(int i = 0; i < robots.size(); i++) {
                 Robot r = robots.get(i);
                 
@@ -89,13 +88,6 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                 b.setFocusPainted(false);
                 b.setFont(b.getFont().deriveFont(30f));
                 buttons.add(b);
-                
-//                JToggleButton b = new JToggleButton(r.action = new LeaderAction(this, r));
-//                b.setForeground(Color.GRAY);
-//                b.setFocusPainted(false);
-//                b.setFont(b.getFont().deriveFont(30f));
-//                g.add(b);
-//                buttons.add(b);
                 
                 r.action.addChangedListener(this);
             }
@@ -375,6 +367,8 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
      * </p>
      */
     private class BotStatus extends Interruptible {
+        private boolean notNow;
+        
         public BotStatus(ExecutorService pool) {
             super(pool);
         }
@@ -383,9 +377,15 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         protected synchronized void execute() {
             while(isRunning()) {
                 try {
-                    wait(60 * 1000);
-                    log.printf(INFO, "Status update...");
+                    wait(9 * 1000);
+                    log.printf(TRACE, "Status update...");
                     sendAll(STATUS);
+                    notNow = true;
+                    wait(1 * 1000);
+                    log.printf(DEBUG, "check timeouts...");
+                    for(Robot r:robots)
+                        r.action.checkTimeout();
+                    notNow = false;
                 } catch(InterruptedException ex) {
                     log.trace(WARNING, ex);
                 } catch(IOException ex) {
@@ -395,7 +395,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         }
         
         public synchronized void invoke() {
-            notify();
+            if(!notNow) notify();
         }
     }
     
