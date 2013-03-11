@@ -136,7 +136,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         }
         
         setL10n(l10ns[0]);
-        orderRobots();
+        orderRobots(false);
     }
     
     public void toggleLang() {
@@ -192,7 +192,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
     @Override
     public void change(Robot robot) {
         log.printf(DEBUG, "%s %s", robot.name(), robot.action.isCharging()? "inactive":"active");
-        orderRobots();
+        orderRobots(false);
     }
     
     public void requestStatus() {
@@ -208,7 +208,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         selectedRobot = r;
         for(Robot other:robots)
             if(r != other) other.action.setSelected(false);
-        orderRobots();
+        orderRobots(true);
     }
     
     /**
@@ -217,7 +217,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
      * follow their respective previous robots.
      * </p>
      */
-    private void orderRobots() {
+    private void orderRobots(boolean userInitiated) {
         try {
             log.printf(INFO, "reorder robots...");
             
@@ -248,7 +248,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             } else {
                 //active, and selection. reorder robots
                 
-                busy.invoke();
+                if(userInitiated) busy.invoke();
                 
                 selectedRobot.action.setSelected(false);
                 selectedRobot = active;
@@ -378,7 +378,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             while(isRunning()) {
                 try {
                     wait(9 * 1000);
-                    log.printf(TRACE, "Status update...");
+                    log.printf(DEBUG, "Status update...");
                     sendAll(STATUS);
                     notNow = true;
                     wait(1 * 1000);
