@@ -28,7 +28,7 @@ import cbcserver.actions.LeaderAction;
  * @author SillyFreak
  */
 public enum Robot implements Localizable {
-    RED("192.168.1.11"), YELLOW("192.168.1.12"), ORANGE("192.168.1.13"), MAGENTA("192.168.1.14");
+    RED("192.168.1.11"), YELLOW("192.168.1.12"), GREEN("192.168.1.13"), MAGENTA("192.168.1.14");
     
     public static final List<Robot>   robots = unmodifiableList(asList(Robot.values()));
     private static Map<String, Robot> byAddress;
