@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.JCheckBox;
 import javax.swing.event.EventListenerList;
 
 import cbcserver.L10n.Localizable;
@@ -72,7 +71,7 @@ public enum Robot implements Localizable {
         //GUI
         this.color = getColor(name());
         this.ccode = color.getRGB() & 0x00FFFFFF;
-        this.receive = new JCheckBox("", true);
+//        this.receive = new JCheckBox("", true);
     }
     
     //helper
@@ -183,7 +182,7 @@ public enum Robot implements Localizable {
      * </p>
      */
     public void send(char m) throws IOException {
-        if(receive.isSelected() && client != null) client.send(m);
+        if(client != null) client.send(m);
     }
     
     /**
@@ -198,16 +197,16 @@ public enum Robot implements Localizable {
     
     //GUI
     
-    public final JCheckBox receive;
-    public final Color     color;
-    private final int      ccode;
-    public String          displayName;
-    public LeaderAction    action;
+//    public final JCheckBox receive;
+    public final Color  color;
+    private final int   ccode;
+    public String       displayName;
+    public LeaderAction action;
     
     @Override
     public void setL10n(L10n l10n) {
         displayName = l10n.format("robot." + ordinal());
-        receive.setText("<html>" + displayName + "</html>");
+//        receive.setText("<html>" + displayName + "</html>");
         action.setL10n(l10n);
     }
     

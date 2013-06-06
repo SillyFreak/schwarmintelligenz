@@ -22,8 +22,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
-import javax.swing.JToolBar;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 import org.jdesktop.swingx.JXButton;
@@ -61,6 +59,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
     
     private final JLabel            label;
     private final JXCollapsiblePane help;
+    private RobotToolBar            bar;
     
     private final ExecutorService   pool;
     private final BotStatus         bots;
@@ -81,9 +80,10 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             JXPanel buttons = new JXPanel(new GridLayout(1, 0, 3, 3));
             for(int i = 0; i < robots.size(); i++) {
                 Robot r = robots.get(i);
+                r.action = new LeaderAction(this, r);
+                r.setState(CHARGING);
                 
-                JXButton b = new JXButton(r.action = new LeaderAction(this, r));
-                r.action.install(b);
+                JXButton b = r.action.makeButton();
                 b.setForeground(Color.GRAY);
                 b.setFocusPainted(false);
                 b.setFont(b.getFont().deriveFont(30f));
@@ -151,6 +151,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         
         for(Robot r:robots)
             r.setL10n(l10n);
+        bar.setL10n(l10n);
         updateLabels();
     }
     
@@ -159,12 +160,9 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
     }
     
     private void makeJToolBar() {
-        JToolBar bar = new JToolBar(SwingConstants.VERTICAL);
-        
-        for(int i = 0; i < robots.size(); i++)
-            bar.add(robots.get(i).receive);
-        
+        bar = new RobotToolBar(this);
         bar.add(new StatusAction(this));
+        bar.addCommand("Charge now", CHARGE);
         
         getContentPane().add(bar, BorderLayout.WEST);
     }

@@ -15,4 +15,5 @@ public interface Commands {
     public static final char ACTIVE   = 'a';
     public static final char INACTIVE = 'i';
     public static final char STATUS   = 's';
+    public static final char CHARGE   = 'c';
 }

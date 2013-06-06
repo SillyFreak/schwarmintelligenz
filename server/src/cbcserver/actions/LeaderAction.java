@@ -64,7 +64,6 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
     public LeaderAction(CBCGUI gui, Robot robot) {
         super(gui, "", null);
         this.r = robot;
-        robot.setState(CHARGING);
     }
     
     @Override
@@ -72,7 +71,8 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         putValue(Action.NAME, l10n.format("button.charging", r.displayName));
     }
     
-    public void install(JXButton b) {
+    public JXButton makeButton() {
+        JXButton b = new JXButton(this);
         b.setBackgroundPainter(new TogglePainter());
         b.setForegroundPainter(fp = new ForegroundPainter(b));
 //        JXBusyLabel l = new JXBusyLabel();
@@ -83,6 +83,8 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
 //        
 //        b.setLayout(new BorderLayout());
 //        b.add(l);
+        
+        return b;
     }
     
     public void setBusy(boolean busy) {
