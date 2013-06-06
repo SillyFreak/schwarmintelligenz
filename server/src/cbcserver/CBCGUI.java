@@ -89,7 +89,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                 b.setFont(b.getFont().deriveFont(30f));
                 buttons.add(b);
                 
-                r.action.addChangedListener(this);
+                r.addChangedListener(this);
             }
             
             help = new JXCollapsiblePane(Direction.DOWN);
@@ -191,7 +191,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
      */
     @Override
     public void change(Robot robot) {
-        log.printf(DEBUG, "%s %s", robot.name(), robot.action.isCharging()? "inactive":"active");
+        log.printf(DEBUG, "%s %s", robot.name(), robot.isCharging()? "inactive":"active");
         orderRobots(false);
     }
     
@@ -207,7 +207,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
     public void setLeader(Robot r) {
         selectedRobot = r;
         for(Robot other:robots)
-            if(r != other) other.action.setSelected(false);
+            if(r != other) other.setSelected(false);
         orderRobots(true);
     }
     
@@ -225,7 +225,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             Robot active = null;
             for(int i = first; i < first + size; i++) {
                 Robot r = robots.get(i % size);
-                if(!r.action.isCharging()) {
+                if(!r.isCharging()) {
                     active = r;
                     break;
                 }
@@ -234,7 +234,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             if(active == null) {
                 //nothing active; clear the selected state
                 if(selectedRobot != null) {
-                    selectedRobot.action.setSelected(false);
+                    selectedRobot.setSelected(false);
                     selectedRobot = null;
                 }
                 label.setText(l10n.format("order.noActive"));
@@ -250,9 +250,9 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                 
                 if(userInitiated) busy.invoke();
                 
-                selectedRobot.action.setSelected(false);
+                selectedRobot.setSelected(false);
                 selectedRobot = active;
-                selectedRobot.action.setSelected(true);
+                selectedRobot.setSelected(true);
                 
                 log.printf(INFO, "...selected: %s", selectedRobot);
                 
@@ -260,7 +260,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                 Robot lastRobot = null;
                 for(int i = first; i < first + size; i++) {
                     Robot robot = robots.get(i % size);
-                    if(robot.action.isCharging()) {
+                    if(robot.isCharging()) {
                         log.printf(TRACE, "  %s inactive", robot);
                         continue;
                     }
@@ -292,7 +292,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         Robot active = null;
         for(int i = first; i < first + size; i++) {
             Robot r = robots.get(i % size);
-            if(!r.action.isCharging()) {
+            if(!r.isCharging()) {
                 active = r;
                 break;
             }
@@ -313,7 +313,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
             Robot lastRobot = null;
             for(int i = first; i < first + size; i++) {
                 Robot robot = robots.get(i % size);
-                if(robot.action.isCharging()) {
+                if(robot.isCharging()) {
                     continue;
                 }
                 
@@ -384,7 +384,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                     wait(1 * 1000);
                     log.printf(DEBUG, "check timeouts...");
                     for(Robot r:robots)
-                        r.action.checkTimeout();
+                        r.checkTimeout();
                     notNow = false;
                 } catch(InterruptedException ex) {
                     log.trace(WARNING, ex);
@@ -412,7 +412,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
                     log.printf(INFO, "Robots are now busy...");
                     Thread.sleep((debug? 1:30) * 1000);
                     for(Robot r:robots)
-                        r.action.setBusy(false);
+                        r.setBusy(false);
                     log.printf(INFO, "Robots are now ready!");
                 } catch(InterruptedException ex) {
                     log.trace(WARNING, ex);
@@ -422,7 +422,7 @@ public final class CBCGUI extends JXRootPane implements Commands, ChangedListene
         
         public synchronized void invoke() {
             for(Robot r:robots)
-                r.action.setBusy(true);
+                r.setBusy(true);
             notify();
         }
     }

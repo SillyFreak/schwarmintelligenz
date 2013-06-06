@@ -7,7 +7,7 @@
 package cbcserver.actions;
 
 
-import static cbcserver.Logger.*;
+import static cbcserver.Robot.*;
 
 import java.awt.Color;
 import java.awt.FontMetrics;
@@ -23,7 +23,6 @@ import javax.swing.AbstractButton;
 import javax.swing.Action;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.event.EventListenerList;
 import javax.swing.plaf.basic.BasicHTML;
 import javax.swing.text.View;
 
@@ -33,7 +32,6 @@ import org.jdesktop.swingx.painter.Painter;
 
 import sun.swing.SwingUtilities2;
 import cbcserver.CBCGUI;
-import cbcserver.ChangedListener;
 import cbcserver.L10n;
 import cbcserver.L10n.Localizable;
 import cbcserver.Robot;
@@ -50,10 +48,6 @@ import cbcserver.Robot;
 public class LeaderAction extends CBCGUIAction implements Localizable {
     private static final long        serialVersionUID = 4586228180396062210L;
     
-    private final EventListenerList  listeners        = new EventListenerList();
-    
-    public static final int          SELECTED         = 1, CHARGING = 2, BUSY = 4;
-    
     private static final BusyPainter bp;
     
     static {
@@ -64,20 +58,18 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         bp.setPaintCentered(true);
     }
     
+    private final Robot              r;
     private ForegroundPainter        fp;
-    private final Robot              robot;
-    private int                      state;
-    private long                     lastPing;
     
     public LeaderAction(CBCGUI gui, Robot robot) {
         super(gui, "", null);
-        this.robot = robot;
-        setState(CHARGING);
+        this.r = robot;
+        robot.setState(CHARGING);
     }
     
     @Override
     public void setL10n(L10n l10n) {
-        putValue(Action.NAME, l10n.format("button.charging", getRobot().displayName));
+        putValue(Action.NAME, l10n.format("button.charging", r.displayName));
     }
     
     public void install(JXButton b) {
@@ -93,88 +85,15 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
 //        b.add(l);
     }
     
-    public int getState() {
-        return state;
-    }
-    
-    public void setState(int state) {
-        int change = this.state ^ state;
-        
-        this.state = state;
-        setEnabled(!isCharging() && !isBusy());
-        if((change & CHARGING) != 0) {
-            fireChanged();
-        }
-        
-        if(fp != null) fp.setBusy((state & BUSY) != 0);
-    }
-    
-    public void setSelected(boolean selected) {
-        setState(selected? (state | SELECTED):(state & ~SELECTED));
-    }
-    
-    public boolean isSelected() {
-        return (state & SELECTED) != 0;
-    }
-    
-    public void checkTimeout() {
-        if(System.currentTimeMillis() - lastPing > 1500 && !isCharging()) {
-            robot.log.printf(DEBUG, "...ping timeout");
-            setState(state ^ CHARGING);
-        }
-    }
-    
-    public void setCharging(boolean charging) {
-        if(!charging) {
-            robot.log.printf(DEBUG, "...ping update");
-            lastPing = System.currentTimeMillis();
-        }
-        setState(charging? (state | CHARGING):(state & ~CHARGING));
-    }
-    
-    public boolean isCharging() {
-        return (state & CHARGING) != 0;
-    }
-    
     public void setBusy(boolean busy) {
-        setState(busy? (state | BUSY):(state & ~BUSY));
-    }
-    
-    public boolean isBusy() {
-        return (state & BUSY) != 0;
-    }
-    
-    private Robot getRobot() {
-        return robot;
-    }
-    
-    private void fireChanged() {
-        Robot r = getRobot();
-        
-        // Guaranteed to return a non-null array
-        Object[] l = listeners.getListenerList();
-        // Process the listeners last to first, notifying
-        // those that are interested in this event
-        for(int i = l.length - 2; i >= 0; i -= 2) {
-            if(l[i] == ChangedListener.class) {
-                ((ChangedListener) l[i + 1]).change(r);
-            }
-        }
-    }
-    
-    public void addChangedListener(ChangedListener l) {
-        listeners.add(ChangedListener.class, l);
-    }
-    
-    public void removeChangedListener(ChangedListener l) {
-        listeners.remove(ChangedListener.class, l);
+        if(fp != null) fp.setBusy(busy);
     }
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        if(!isSelected()) {
-            setState(state ^ SELECTED);
-            gui.setLeader(getRobot());
+        if(!r.isSelected()) {
+            r.setState(r.getState() ^ SELECTED);
+            gui.setLeader(r);
         }
     }
     
@@ -183,7 +102,7 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         private final Color[] normal, pressed, selected, disabled;
         
         public TogglePainter() {
-            Color color = robot.color;
+            Color color = r.color;
             Color darker = color.darker();
             Color ddarker = darker.darker();
             
@@ -196,7 +115,7 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         @Override
         public void paint(Graphics2D g, JXButton b, int width, int height) {
             boolean isPressed = b.getModel().isArmed() && b.getModel().isPressed();
-            Color[] colors = isCharging()? disabled:isSelected()? selected:isPressed? pressed:normal;
+            Color[] colors = r.isCharging()? disabled:r.isSelected()? selected:isPressed? pressed:normal;
             int w = b.getWidth(), h = b.getHeight();
             
             g.setPaint(new LinearGradientPaint(w * .4f, h * .05f, w * .6f, h * .95f, floats, colors));
@@ -218,11 +137,11 @@ public class LeaderAction extends CBCGUIAction implements Localizable {
         
         @Override
         public void paint(Graphics2D g, JXButton b, int width, int height) {
-            if(isCharging()) {
+            if(r.isCharging()) {
                 layout(b, SwingUtilities2.getFontMetrics(b, g), b.getWidth(), b.getHeight());
                 View v = (View) b.getClientProperty(BasicHTML.propertyKey);
                 v.paint(g, textRect);
-            } else if(isBusy()) {
+            } else if(r.isBusy()) {
                 bp.paint(g, b, width, height);
             }
         }

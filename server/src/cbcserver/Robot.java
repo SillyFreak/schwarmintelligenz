@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.JCheckBox;
+import javax.swing.event.EventListenerList;
 
 import cbcserver.L10n.Localizable;
 import cbcserver.actions.LeaderAction;
@@ -30,13 +31,27 @@ import cbcserver.actions.LeaderAction;
 public enum Robot implements Localizable {
     RED("192.168.1.11"), YELLOW("192.168.1.12"), GREEN("192.168.1.13"), MAGENTA("192.168.1.14");
     
-    public static final List<Robot>   robots = unmodifiableList(asList(Robot.values()));
-    private static Map<String, Robot> byAddress;
+    //enum stuff
+    
+    public static final List<Robot>        robots;
+    public static final Map<String, Robot> byAddress;
     
     static {
-        byAddress = new HashMap<String, Robot>();
+        robots = unmodifiableList(asList(Robot.values()));
+        
+        HashMap<String, Robot> m = new HashMap<String, Robot>();
         for(Robot r:values())
-            byAddress.put(r.ip, r);
+            m.put(r.ip, r);
+        byAddress = unmodifiableMap(m);
+    }
+    
+    /**
+     * <p>
+     * Returns the robot by its index
+     * </p>
+     */
+    public static Robot getByIndex(int index) {
+        return robots.get(index);
     }
     
     /**
@@ -47,6 +62,20 @@ public enum Robot implements Localizable {
     public static Robot getByAddress(String addr) {
         return byAddress.get(addr);
     }
+    
+    private Robot(String ip) {
+        //logic
+        this.ip = ip;
+        this.follow = (char) ('0' + ordinal());
+        this.listeners = new EventListenerList();
+        
+        //GUI
+        this.color = getColor(name());
+        this.ccode = color.getRGB() & 0x00FFFFFF;
+        this.receive = new JCheckBox("", true);
+    }
+    
+    //helper
     
     /**
      * <p>
@@ -63,36 +92,89 @@ public enum Robot implements Localizable {
         }
     }
     
-    public final Logger    log = new Logger(name(), DEBUG);
-    private final String   ip;
+    public final Logger             log = new Logger(name(), DEBUG);
     
-    public final JCheckBox receive;
-    public final Color     color;
-    private final int      ccode;
-    public String          displayName;
-    public final char      follow;
-    public LeaderAction    action;
+    //logic
     
-    public RobotHandle     client;
+    public static final int         SELECTED = 0x1, CHARGING = 2, BUSY = 0x4;
     
-    private Robot(String ip) {
-        this.color = getColor(name());
-        this.ccode = color.getRGB() & 0x00FFFFFF;
-        this.follow = (char) ('0' + ordinal());
-        this.ip = ip;
+    public final String             ip;
+    public final char               follow;
+    private int                     state;
+    private long                    lastPing;
+    public RobotHandle              client;
+    private final EventListenerList listeners;
+    
+    public int getState() {
+        return state;
+    }
+    
+    public void setState(int state) {
+        int change = this.state ^ state;
+        this.state = state;
         
-        receive = new JCheckBox("", true);
+        //enabled if neither charging nor busy
+        action.setEnabled((state & (CHARGING | BUSY)) == 0);
+        if((change & CHARGING) != 0) {
+            fireChanged();
+        }
+        
+        action.setBusy((state & BUSY) != 0);
     }
     
-    @Override
-    public void setL10n(L10n l10n) {
-        displayName = l10n.format("robot." + ordinal());
-        receive.setText("<html>" + displayName + "</html>");
-        action.setL10n(l10n);
+    public void setSelected(boolean selected) {
+        setState(selected? (state | SELECTED):(state & ~SELECTED));
     }
     
-    public String getHTMLNamePlain() {
-        return format("<font color=#%06X>%s</font>", ccode, displayName);
+    public boolean isSelected() {
+        return (state & SELECTED) != 0;
+    }
+    
+    public void checkTimeout() {
+        if(System.currentTimeMillis() - lastPing > 1500 && !isCharging()) {
+            log.printf(DEBUG, "...ping timeout");
+            setState(state ^ CHARGING);
+        }
+    }
+    
+    public void setCharging(boolean charging) {
+        if(!charging) {
+            log.printf(DEBUG, "...ping update");
+            lastPing = System.currentTimeMillis();
+        }
+        setState(charging? (state | CHARGING):(state & ~CHARGING));
+    }
+    
+    public boolean isCharging() {
+        return (state & CHARGING) != 0;
+    }
+    
+    public void setBusy(boolean busy) {
+        setState(busy? (state | BUSY):(state & ~BUSY));
+    }
+    
+    public boolean isBusy() {
+        return (state & BUSY) != 0;
+    }
+    
+    private void fireChanged() {
+        // Guaranteed to return a non-null array
+        Object[] l = listeners.getListenerList();
+        // Process the listeners last to first, notifying
+        // those that are interested in this event
+        for(int i = l.length - 2; i >= 0; i -= 2) {
+            if(l[i] == ChangedListener.class) {
+                ((ChangedListener) l[i + 1]).change(this);
+            }
+        }
+    }
+    
+    public void addChangedListener(ChangedListener l) {
+        listeners.add(ChangedListener.class, l);
+    }
+    
+    public void removeChangedListener(ChangedListener l) {
+        listeners.remove(ChangedListener.class, l);
     }
     
     /**
@@ -112,5 +194,24 @@ public enum Robot implements Localizable {
     public static void sendAll(char m) throws IOException {
         for(Robot r:robots)
             r.send(m);
+    }
+    
+    //GUI
+    
+    public final JCheckBox receive;
+    public final Color     color;
+    private final int      ccode;
+    public String          displayName;
+    public LeaderAction    action;
+    
+    @Override
+    public void setL10n(L10n l10n) {
+        displayName = l10n.format("robot." + ordinal());
+        receive.setText("<html>" + displayName + "</html>");
+        action.setL10n(l10n);
+    }
+    
+    public String getHTMLNamePlain() {
+        return format("<font color=#%06X>%s</font>", ccode, displayName);
     }
 }
